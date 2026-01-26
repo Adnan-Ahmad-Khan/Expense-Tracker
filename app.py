@@ -1,10 +1,7 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import func
+from sqlalchemy import func, extract
 from datetime import datetime
-from flask import redirect, url_for
-from sqlalchemy import extract
-
 
 app = Flask(__name__)
 
@@ -21,139 +18,121 @@ class Expense(db.Model):
     date = db.Column(db.DateTime, default=datetime.utcnow)
 
 
-# 🔥 MUST BE HERE
 with app.app_context():
     db.create_all()
 
 
-@app.route('/', methods=['GET', 'POST'])
+@app.route("/", methods=["GET", "POST"])
 def home():
-    if request.method == 'POST':
-        amount = request.form.get('amount')
-        category = request.form.get('category')
+    # ---------- ADD EXPENSE ----------
+    if request.method == "POST":
+        amount = float(request.form.get("amount"))
+        category = request.form.get("category")
 
-        expense = Expense(amount=amount, category=category)
-        db.session.add(expense)
+        db.session.add(Expense(amount=amount, category=category))
         db.session.commit()
+        return redirect(url_for("home"))
 
-    # 🔍 FILTERS
-    selected_category = request.args.get('category')
-    selected_month = request.args.get('month')
+    # ---------- FILTERS ----------
+    selected_month = request.args.get("month")
+    selected_category = request.args.get("category")
 
     query = Expense.query
 
-    if selected_category and selected_category != 'all':
+    if selected_category:
         query = query.filter(Expense.category == selected_category)
 
-    if selected_month and selected_month != 'all':
-        year, month = selected_month.split('-')
+    if selected_month:
+        year, month = selected_month.split("-")
         query = query.filter(
-            extract('year', Expense.date) == int(year),
-            extract('month', Expense.date) == int(month)
+            extract("year", Expense.date) == int(year),
+            extract("month", Expense.date) == int(month),
         )
 
-    # ✅ ALWAYS get expenses FIRST
-    all_expenses = query.all()
+    expenses = query.order_by(Expense.date.desc()).all()
 
-    # 🔥 TOTAL EXPENSE
-    total_expense = sum(exp.amount for exp in all_expenses)
-
-    # 🔥 MONTHLY LIMIT LOGIC (NOW SAFE)
+    # ---------- TOTALS ----------
+    total_spent = sum(e.amount for e in expenses)
     monthly_limit = 5000
-    current_month_total = total_expense
 
-    # 🔥 CATEGORY-WISE ANALYTICS
+    # ---------- CATEGORY DATA ----------
     category_data = (
-        db.session.query(
-            Expense.category,
-            func.sum(Expense.amount)
-        )
+        db.session.query(Expense.category, func.sum(Expense.amount))
         .group_by(Expense.category)
         .all()
     )
-    category_data = [(row[0], float(row[1])) for row in category_data]
+    category_data = [(c, float(t)) for c, t in category_data]
 
-    # 🔥 MONTHLY ANALYTICS
+    # ---------- MONTHLY TREND ----------
     monthly_data = (
-        query.with_entities(
-            extract('month', Expense.date),
-            extract('year', Expense.date),
-            func.sum(Expense.amount)
+        db.session.query(
+            extract("month", Expense.date),
+            extract("year", Expense.date),
+            func.sum(Expense.amount),
         )
-        .group_by(
-            extract('month', Expense.date),
-            extract('year', Expense.date)
-        )
-        .order_by(
-            extract('year', Expense.date),
-            extract('month', Expense.date)
-        )
+        .group_by(extract("month", Expense.date), extract("year", Expense.date))
+        .order_by(extract("year", Expense.date), extract("month", Expense.date))
         .all()
     )
 
     monthly_data = [
-        (f"{int(month)}/{int(year)}", float(total))
-        for month, year, total in monthly_data
+        (f"{int(m)}/{int(y)}", float(t)) for m, y, t in monthly_data
     ]
 
-    # 🔥 FILTER DROPDOWNS
-    categories = [
-        row[0] for row in
-        db.session.query(Expense.category).distinct().all()
-    ]
+    # ---------- FILTER DROPDOWNS ----------
+    categories = [c[0]
+                  for c in db.session.query(Expense.category).distinct().all()]
 
     months = [
-        f"{row[0]}-{row[1]:02d}"
-        for row in db.session.query(
-            extract('year', Expense.date),
-            extract('month', Expense.date)
-        ).distinct().order_by(
-            extract('year', Expense.date),
-            extract('month', Expense.date)
-        ).all()
+        f"{y}-{m:02d}"
+        for y, m in db.session.query(
+            extract("year", Expense.date),
+            extract("month", Expense.date),
+        )
+        .distinct()
+        .order_by(extract("year", Expense.date), extract("month", Expense.date))
+        .all()
     ]
 
     return render_template(
-        'index.html',
-        expenses=all_expenses,
-        total_expense=total_expense,
+        "index.html",
+        expenses=expenses,
+        total_spent=total_spent,
+        monthly_limit=monthly_limit,
         category_data=category_data,
         monthly_data=monthly_data,
-        selected_category=selected_category,
-        selected_month=selected_month,
         categories=categories,
         months=months,
-        monthly_limit=monthly_limit,
-        current_month_total=current_month_total
+        selected_month=selected_month,
+        selected_category=selected_category,
     )
 
 
-@app.route('/expenses')
+@app.route("/expenses")
 def expense_history():
     expenses = Expense.query.order_by(Expense.date.desc()).all()
-    return render_template('expenses.html', expenses=expenses)
+    return render_template("expenses.html", expenses=expenses)
 
 
-@app.route('/delete/<int:id>')
+@app.route("/delete/<int:id>")
 def delete(id):
-    expense = Expense.query.get_or_404(id)
-    db.session.delete(expense)
+    exp = Expense.query.get_or_404(id)
+    db.session.delete(exp)
     db.session.commit()
-    return redirect(url_for('home'))
+    return redirect(url_for("home"))
 
 
-@app.route('/edit/<int:id>', methods=['GET', 'POST'])
+@app.route("/edit/<int:id>", methods=["GET", "POST"])
 def edit(id):
-    expense = Expense.query.get_or_404(id)
+    exp = Expense.query.get_or_404(id)
 
-    if request.method == 'POST':
-        expense.amount = request.form.get('amount')
-        expense.category = request.form.get('category')
-
+    if request.method == "POST":
+        exp.amount = float(request.form.get("amount"))
+        exp.category = request.form.get("category")
         db.session.commit()
-        return redirect(url_for('home'))
+        return redirect(url_for("home"))
 
-    return render_template('edit.html', expense=expense)
+    return render_template("edit.html", expense=exp)
 
 
 if __name__ == "__main__":
