@@ -1,0 +1,16 @@
+# Virtual environments
+env/
+venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Database
+expense.db
+
+# Flask instance
+instance/
+
+# VS Code settings
+.vscode/
