@@ -113,6 +113,42 @@ def expense_history():
     expenses = Expense.query.order_by(Expense.date.desc()).all()
     return render_template("expenses.html", expenses=expenses)
 
+# Add this route to your app.py (paste it after the expense_history route)
+
+
+@app.route("/analytics")
+def analytics():
+    total_spent = db.session.query(func.sum(Expense.amount)).scalar() or 0
+    monthly_limit = 5000
+
+    category_data = (
+        db.session.query(Expense.category, func.sum(Expense.amount))
+        .group_by(Expense.category)
+        .all()
+    )
+    category_data = [(c, float(t)) for c, t in category_data]
+
+    monthly_data = (
+        db.session.query(
+            extract("month", Expense.date),
+            extract("year", Expense.date),
+            func.sum(Expense.amount),
+        )
+        .group_by(extract("month", Expense.date), extract("year", Expense.date))
+        .order_by(extract("year", Expense.date), extract("month", Expense.date))
+        .all()
+    )
+    monthly_data = [(f"{int(m)}/{int(y)}", float(t))
+                    for m, y, t in monthly_data]
+
+    return render_template(
+        "analytics.html",
+        total_spent=total_spent,
+        monthly_limit=monthly_limit,
+        category_data=category_data,
+        monthly_data=monthly_data,
+    )
+
 
 @app.route("/delete/<int:id>")
 def delete(id):

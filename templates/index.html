@@ -1,211 +1,203 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 
 <head>
     <meta charset="UTF-8">
-    <title>Expense Tracker</title>
-
-    <!-- Bootstrap -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-
-    <!-- Bootstrap Icons -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
-
-    <!-- Custom CSS -->
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Expense Tracker — Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-
-    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
 
-    <!-- NAVBAR -->
-    <nav class="navbar navbar-dark bg-dark px-4">
-        <span class="navbar-brand fw-semibold">Expense Tracker</span>
+    <!-- NAV -->
+    <nav class="et-nav">
+        <a href="{{ url_for('home') }}" class="et-nav__brand">
+            <span class="et-nav__brand-dot"></span>Expense Tracker
+        </a>
+        <div class="et-nav__links">
+            <a href="{{ url_for('home') }}" class="et-nav__link et-nav__link--active">Dashboard</a>
+            <a href="{{ url_for('analytics') }}" class="et-nav__link">Analytics</a>
+            <a href="{{ url_for('expense_history') }}" class="et-nav__link">History</a>
+            <label class="et-toggle" title="Toggle theme">
+                <input type="checkbox" id="themeToggle">
+                <span id="themeIcon">☀</span>
+            </label>
+        </div>
     </nav>
 
-    <div class="container my-4">
+    <div class="et-page">
 
-        <!-- ===== EXPENSE SUMMARY CARD ===== -->
-        <div class="card shadow-sm mb-4">
-            <div class="card-body d-flex justify-content-between align-items-center">
-
-                <div>
-                    <p class="text-muted mb-1">Expenses</p>
-                    <h2 class="fw-bold text-danger mb-0">
-                        ₹ {{ total_spent }} / {{ monthly_limit }}
-                    </h2>
-                </div>
-
-                <div class="limit-chart-container">
-                    <canvas id="limitChart"></canvas>
-                    <div class="percent-text">
-                        {{ ((total_spent / monthly_limit) * 100) | round(0) }}%
-                    </div>
-                </div>
-
-            </div>
+        <!-- PAGE HEADER -->
+        <div class="et-page-header">
+            <h1>Dashboard</h1>
+            <p>Track and manage your spending</p>
         </div>
 
-        <!-- ===== ADD EXPENSE BAR ===== -->
-        <form method="POST" class="filter-bar mb-3">
+        <!-- TOP ROW: summary + add expense -->
+        <div class="et-grid-2" style="margin-bottom:16px; align-items:start;">
 
-            <div class="filter-group">
-                <span class="filter-label">Add Expense</span>
-            </div>
-
-            <div class="filter-group">
-                <span class="filter-label">Amount:</span>
-                <input type="number" name="amount" class="filter-select" placeholder="₹ Amount" required>
-            </div>
-
-            <div class="filter-group">
-                <span class="filter-label">Category:</span>
-                <input type="text" name="category" class="filter-select" placeholder="Food, Travel…" required>
-            </div>
-
-            <div class="filter-group">
-                <button class="btn btn-primary px-4">Add</button>
-            </div>
-
-        </form>
-
-        <!-- ===== FILTER BAR ===== -->
-        <form method="GET" class="filter-bar mb-4">
-
-            <div class="filter-group">
-                <span class="filter-label">Filter:</span>
-                <select name="month" class="filter-select" onchange="this.form.submit()">
-                    <option value="">All</option>
-                    {% for m in months %}
-                    <option value="{{ m }}" {% if selected_month==m %}selected{% endif %}>
-                        {{ m }}
-                    </option>
-                    {% endfor %}
-                </select>
-            </div>
-
-            <div class="filter-group">
-                <span class="filter-label">Category:</span>
-                <select name="category" class="filter-select" onchange="this.form.submit()">
-                    <option value="">All</option>
-                    {% for c in categories %}
-                    <option value="{{ c }}" {% if selected_category==c %}selected{% endif %}>
-                        {{ c }}
-                    </option>
-                    {% endfor %}
-                </select>
-            </div>
-
-        </form>
-
-        <!-- ===== SPENDING TRENDS ===== -->
-        <div class="card shadow-sm mb-4">
-            <div class="card-body">
-                <h5>Spending Trends</h5>
-                <div class="trend-chart-wrapper">
-                    <canvas id="spendingTrendChart"></canvas>
-                </div>
-            </div>
-        </div>
-
-        <!-- ===== CATEGORY + RECENT ===== -->
-        <div class="row g-4 mb-4 align-items-stretch">
-
-            <!-- CATEGORY PIE -->
-            <div class="col-md-7">
-                <div class="card shadow-sm h-100 text-center">
-                    <div class="card-body">
-                        <h6 class="mb-3">Category Expense</h6>
-                        <div class="chart-container">
-                            <canvas id="categoryChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- RECENT TRANSACTIONS -->
-            <div class="col-md-5">
-                <div class="card shadow-sm h-100 recent-transactions">
-                    <div class="card-body d-flex flex-column justify-content-between">
-
+            <!-- SUMMARY CARD -->
+            <div class="et-card">
+                <div class="et-card__body--lg">
+                    <div class="et-summary">
                         <div>
-                            <h6 class="mb-3">Recent Transactions</h6>
-
-                            {% if expenses %}
-                            <ul class="list-group list-group-flush recent-transactions-list">
-                                {% for exp in expenses[:4] %}
-                                <li class="list-group-item d-flex justify-content-between align-items-center px-0">
-                                    <div>
-                                        <strong>{{ exp.category }}</strong><br>
-                                        <small class="text-muted">{{ exp.date.strftime('%d %b %Y') }}</small>
-                                    </div>
-                                    <span class="fw-bold text-danger">₹ {{ exp.amount }}</span>
-                                </li>
-                                {% endfor %}
-                            </ul>
-                            {% else %}
-                            <p class="text-muted">No recent transactions</p>
-                            {% endif %}
+                            <div class="et-card__label">Monthly Spending</div>
+                            <div class="et-summary__amount">
+                                ₹{{ "%.0f"|format(total_spent) }}<span>/ {{ monthly_limit }}</span>
+                            </div>
+                            {% set pct = ((total_spent / monthly_limit) * 100) | round(1) %}
                         </div>
-
-                        <div class="text-end mt-3">
-                            <a href="{{ url_for('expense_history') }}"
-                                class="text-decoration-none fw-semibold text-primary">
-                                View Expense History →
-                            </a>
+                        <div class="et-donut-wrap">
+                            <canvas id="limitChart"></canvas>
+                            <div class="et-donut-label">
+                                <span class="et-donut-label__pct">{{ pct | int }}%</span>
+                                <span class="et-donut-label__sub">used</span>
+                            </div>
                         </div>
-
                     </div>
                 </div>
             </div>
 
+            <!-- ADD EXPENSE CARD -->
+            <div class="et-card">
+                <div class="et-card__body--lg">
+                    <div class="et-card__title">Add Expense</div>
+                    <form method="POST">
+                        <div style="display:flex; flex-direction:column; gap:12px;">
+                            <div>
+                                <label class="et-form-label">Amount (₹)</label>
+                                <input type="number" name="amount" class="et-input" placeholder="0" required>
+                            </div>
+                            <div>
+                                <label class="et-form-label">Category</label>
+                                <select name="category" class="et-input" required id="categorySelect">
+                                    <option value="" disabled selected>Select a category…</option>
+                                    <option value="Food & Drinks">🍽️ Food & Drinks</option>
+                                    <option value="Travel">✈️ Travel</option>
+                                    <option value="Shopping">🛍️ Shopping</option>
+                                    <option value="Transportation">🚗 Transportation</option>
+                                    <option value="Entertainment">⭐ Entertainment</option>
+                                    <option value="Services">💻 Services</option>
+                                    <option value="Health">❤️ Health</option>
+                                    <option value="Home">🏠 Home</option>
+                                    <option value="Utilities">⚡ Utilities</option>
+                                    <option value="Others">📌 Others</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="et-btn et-btn--primary" style="margin-top:4px;">Add
+                                Expense</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
         </div>
-    </div>
 
-    <!-- ===== CHART SCRIPTS ===== -->
+        <!-- FILTER BAR -->
+        <form method="GET">
+            <div class="et-formbar" style="margin-bottom:24px;">
+                <span class="et-formbar__label">Filter</span>
+                <select name="month" class="et-formbar__input" onchange="this.form.submit()" style="max-width:160px;">
+                    <option value="">All Months</option>
+                    {% for m in months %}
+                    <option value="{{ m }}" {% if selected_month==m %}selected{% endif %}>{{ m }}</option>
+                    {% endfor %}
+                </select>
+                <div class="et-divider"></div>
+                <select name="category" class="et-formbar__input" onchange="this.form.submit()"
+                    style="max-width:160px;">
+                    <option value="">All Categories</option>
+                    {% for c in categories %}
+                    <option value="{{ c }}" {% if selected_category==c %}selected{% endif %}>{{ c }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </form>
+
+        <!-- TRANSACTIONS TABLE -->
+        <div class="et-card">
+            <div class="et-card__body">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
+                    <div class="et-card__title" style="margin-bottom:0;">Recent Transactions</div>
+                    <a href="{{ url_for('expense_history') }}" class="et-viewall">View all →</a>
+                </div>
+
+                {% if expenses %}
+                <div style="overflow-x:auto;">
+                    <table class="et-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Category</th>
+                                <th class="text-right">Amount</th>
+                                <th class="text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for exp in expenses[:8] %}
+                            <tr>
+                                <td class="text-muted-col">{{ exp.date.strftime('%d %b %Y') }}</td>
+                                <td><span class="et-pill">{{ exp.category }}</span></td>
+                                <td class="text-right et-amount">₹{{ "%.0f"|format(exp.amount) }}</td>
+                                <td class="text-right" style="white-space:nowrap;">
+                                    <a href="{{ url_for('edit', id=exp.id) }}" class="et-btn et-btn--warning-ghost"
+                                        style="margin-right:6px;">Edit</a>
+                                    <a href="{{ url_for('delete', id=exp.id) }}"
+                                        class="et-btn et-btn--danger-ghost">Delete</a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="et-empty">No expenses yet — add one above!</div>
+                {% endif %}
+            </div>
+        </div>
+
+    </div><!-- /et-page -->
+
     <script>
-        const spent = JSON.parse('{{ total_spent | tojson | safe }}');
-        const limit = JSON.parse('{{ monthly_limit | tojson | safe }}');
-        const remaining = Math.max(limit - spent, 0);
+        const spent = {{ total_spent | tojson }};
+        const lim = {{ monthly_limit | tojson }};
+        const remaining = Math.max(lim - spent, 0);
+        const pct = (spent / lim) * 100;
 
-        const trendLabels = JSON.parse('{{ monthly_data | map(attribute=0) | list | tojson | safe }}');
-        const trendValues = JSON.parse('{{ monthly_data | map(attribute=1) | list | tojson | safe }}');
+        function donutColor(p) {
+            if (p < 50) return "#16a34a";
+            if (p < 80) return "#d97706";
+            return "#dc2626";
+        }
 
-        const categoryLabels = JSON.parse('{{ category_data | map(attribute=0) | list | tojson | safe }}');
-        const categoryValues = JSON.parse('{{ category_data | map(attribute=1) | list | tojson | safe }}');
-
-        new Chart(limitChart, {
-            type: "doughnut",
-            data: { datasets: [{ data: [spent, remaining], backgroundColor: ["#e74a3b", "#e0e0e0"] }] },
-            options: { cutout: "75%", plugins: { legend: { display: false } } }
+        new Chart(document.getElementById('limitChart'), {
+            type: 'doughnut',
+            data: { datasets: [{ data: [spent, remaining], backgroundColor: [donutColor(pct), 'rgba(150,150,150,0.12)'], borderWidth: 0 }] },
+            options: { cutout: '78%', plugins: { legend: { display: false } }, animation: { animateRotate: true, duration: 900 } }
         });
 
-        new Chart(spendingTrendChart, {
-            type: "line",
-            data: {
-                labels: trendLabels,
-                datasets: [{
-                    data: trendValues,
-                    borderColor: "#4e73df",
-                    backgroundColor: "rgba(78,115,223,0.15)",
-                    fill: true,
-                    tension: 0.4
-                }]
-            },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
-        });
-
-        new Chart(categoryChart, {
-            type: "pie",
-            data: {
-                labels: categoryLabels,
-                datasets: [{ data: categoryValues, backgroundColor: ["#4e73df", "#1cc88a", "#f6c23e"] }]
-            }
+        // Theme
+        const toggle = document.getElementById('themeToggle');
+        const icon = document.getElementById('themeIcon');
+        const root = document.documentElement;
+        const saved = localStorage.getItem('theme') || 'light';
+        root.setAttribute('data-theme', saved);
+        toggle.checked = saved === 'dark';
+        icon.textContent = saved === 'dark' ? '☽' : '☀';
+        toggle.addEventListener('change', () => {
+            const t = toggle.checked ? 'dark' : 'light';
+            root.setAttribute('data-theme', t);
+            localStorage.setItem('theme', t);
+            icon.textContent = t === 'dark' ? '☽' : '☀';
         });
     </script>
-
 </body>
 
 </html>

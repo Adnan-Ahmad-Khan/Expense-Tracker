@@ -1,52 +1,93 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 
 <head>
     <meta charset="UTF-8">
-    <title>Expense History</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Expense Tracker — History</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 
-<body class="bg-light">
+<body>
 
-    <div class="container my-4">
-
-        <a href="{{ url_for('home') }}" class="text-decoration-none">
-            ← Back to Dashboard
+    <nav class="et-nav">
+        <a href="{{ url_for('home') }}" class="et-nav__brand">
+            <span class="et-nav__brand-dot"></span>Expense Tracker
         </a>
+        <div class="et-nav__links">
+            <a href="{{ url_for('home') }}" class="et-nav__link">Dashboard</a>
+            <a href="{{ url_for('analytics') }}" class="et-nav__link">Analytics</a>
+            <a href="{{ url_for('expense_history') }}" class="et-nav__link et-nav__link--active">History</a>
+            <label class="et-toggle" title="Toggle theme">
+                <input type="checkbox" id="themeToggle">
+                <span id="themeIcon">☀</span>
+            </label>
+        </div>
+    </nav>
 
-        <h3 class="mt-3 mb-4">Expense History</h3>
+    <div class="et-page">
+        <div class="et-page-header">
+            <h1>Expense History</h1>
+            <p>All your recorded transactions</p>
+        </div>
 
-        {% if expenses %}
-        <table class="table table-hover align-middle">
-            <thead class="table-dark">
-                <tr>
-                    <th>Date</th>
-                    <th>Category</th>
-                    <th>Amount</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for exp in expenses %}
-                <tr>
-                    <td>{{ exp.date.strftime('%d %b %Y') }}</td>
-                    <td>{{ exp.category }}</td>
-                    <td>₹ {{ exp.amount }}</td>
-                    <td>
-                        <a href="{{ url_for('edit', id=exp.id) }}" class="btn btn-sm btn-warning">Edit</a>
-                        <a href="{{ url_for('delete', id=exp.id) }}" class="btn btn-sm btn-danger">Delete</a>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        {% else %}
-        <p class="text-muted">No expenses found.</p>
-        {% endif %}
-
+        <div class="et-card">
+            <div class="et-card__body">
+                {% if expenses %}
+                <div style="overflow-x:auto;">
+                    <table class="et-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Category</th>
+                                <th class="text-right">Amount</th>
+                                <th class="text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for exp in expenses %}
+                            <tr>
+                                <td class="text-muted-col">{{ exp.date.strftime('%d %b %Y') }}</td>
+                                <td><span class="et-pill">{{ exp.category }}</span></td>
+                                <td class="text-right et-amount">₹{{ "%.0f"|format(exp.amount) }}</td>
+                                <td class="text-right" style="white-space:nowrap;">
+                                    <a href="{{ url_for('edit', id=exp.id) }}" class="et-btn et-btn--warning-ghost"
+                                        style="margin-right:6px;">Edit</a>
+                                    <a href="{{ url_for('delete', id=exp.id) }}"
+                                        class="et-btn et-btn--danger-ghost">Delete</a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="et-empty">No expenses recorded yet.</div>
+                {% endif %}
+            </div>
+        </div>
     </div>
 
+    <script>
+        const toggle = document.getElementById('themeToggle');
+        const icon = document.getElementById('themeIcon');
+        const root = document.documentElement;
+        const saved = localStorage.getItem('theme') || 'light';
+        root.setAttribute('data-theme', saved);
+        toggle.checked = saved === 'dark';
+        icon.textContent = saved === 'dark' ? '☽' : '☀';
+        toggle.addEventListener('change', () => {
+            const t = toggle.checked ? 'dark' : 'light';
+            root.setAttribute('data-theme', t);
+            localStorage.setItem('theme', t);
+            icon.textContent = t === 'dark' ? '☽' : '☀';
+        });
+    </script>
 </body>
 
 </html>
