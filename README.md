@@ -31,6 +31,7 @@ A full-stack **Expense Tracker web application** built using **Flask**, designed
 - Expense-Tracker/
 - ├── app.py
 - ├── templates/
+- │   ├── analytics.html
 - │   ├── index.html
 - │   ├── edit.html
 - │   └── expenses.html
