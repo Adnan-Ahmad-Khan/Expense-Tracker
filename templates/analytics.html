@@ -16,15 +16,17 @@
 
 <body>
 
-    <!-- NAV -->
+    <!-- ── NAVBAR ─────────────────────────────── -->
     <nav class="et-nav">
         <a href="{{ url_for('home') }}" class="et-nav__brand">
             <span class="et-nav__brand-dot"></span>Expense Tracker
         </a>
         <div class="et-nav__links">
+            <span class="et-nav__user">Hi, {{ user.name.split()[0] }} 👋</span>
             <a href="{{ url_for('home') }}" class="et-nav__link">Dashboard</a>
             <a href="{{ url_for('analytics') }}" class="et-nav__link et-nav__link--active">Analytics</a>
             <a href="{{ url_for('expense_history') }}" class="et-nav__link">History</a>
+            <a href="{{ url_for('logout') }}" class="et-nav__link" style="color:var(--red-soft);">Logout</a>
             <label class="et-toggle" title="Toggle theme">
                 <input type="checkbox" id="themeToggle">
                 <span id="themeIcon">☀</span>
@@ -39,218 +41,320 @@
             <p>Understand your spending patterns</p>
         </div>
 
-        <!-- STAT ROW -->
+        <!-- ── STAT PILLS ───────────────────────── -->
         <div class="et-grid-4" style="margin-bottom:16px;">
 
+            <!-- Total Spent -->
             <div class="et-card">
                 <div class="et-stat">
                     <div class="et-stat__label">Total Spent</div>
-                    <div class="et-stat__value" style="color:var(--red)">₹{{ "%.0f"|format(total_spent) }}</div>
+                    <div class="et-stat__value" style="color:var(--red);">
+                        ₹{{ "%.0f"|format(total_spent) }}
+                    </div>
+                    {% if mom_change is not none %}
+                    <div class="et-stat__change
+          {% if mom_change > 0 %}et-stat__change--up
+          {% elif mom_change < 0 %}et-stat__change--down
+          {% else %}et-stat__change--flat{% endif %}">
+                        {% if mom_change > 0 %}↑{% elif mom_change < 0 %}↓{% else %}→{% endif %} {{ mom_change | abs }}%
+                            vs last month </div>
+                            {% endif %}
+                    </div>
                 </div>
+
+                <!-- Monthly Limit -->
+                <div class="et-card">
+                    <div class="et-stat">
+                        <div class="et-stat__label">Monthly Limit</div>
+                        <div class="et-stat__value">₹{{ monthly_limit | int }}</div>
+                        <div class="et-stat__change et-stat__change--flat">
+                            {% set used_pct = ((total_spent / monthly_limit) * 100) | round(1) %}
+                            {{ used_pct }}% used
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Avg / Month -->
+                <div class="et-card">
+                    <div class="et-stat">
+                        <div class="et-stat__label">Avg / Month</div>
+                        <div class="et-stat__value" style="color:var(--accent);">
+                            {% if monthly_data %}
+                            ₹{{ "%.0f"|format((monthly_data | map(attribute=1) | list | sum) / (monthly_data | length))
+                            }}
+                            {% else %}—{% endif %}
+                        </div>
+                        <div class="et-stat__change et-stat__change--flat">
+                            {{ monthly_data | length }} month{% if monthly_data | length != 1 %}s{% endif %} tracked
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Top Category -->
+                <div class="et-card">
+                    <div class="et-stat">
+                        <div class="et-stat__label">Top Category</div>
+                        <div class="et-stat__value" style="color:var(--amber); font-size:1.15rem; margin-top:4px;">
+                            {% if category_data %}
+                            {{ category_data | sort(attribute=1) | last | first }}
+                            {% else %}—{% endif %}
+                        </div>
+                        <div class="et-stat__change et-stat__change--flat">
+                            {% if category_data %}
+                            ₹{{ "%.0f"|format(category_data | sort(attribute=1) | last | last) }} spent
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
             </div>
 
-            <div class="et-card">
-                <div class="et-stat">
-                    <div class="et-stat__label">Monthly Limit</div>
-                    <div class="et-stat__value">₹{{ monthly_limit }}</div>
-                </div>
-            </div>
-
-            <div class="et-card">
-                <div class="et-stat">
-                    <div class="et-stat__label">Avg / Month</div>
-                    <div class="et-stat__value" style="color:var(--accent)">
-                        {% if monthly_data %}
-                        ₹{{ "%.0f"|format((monthly_data | map(attribute=1) | list | sum) / (monthly_data | length)) }}
-                        {% else %}—{% endif %}
+            <!-- ── SPENDING TREND ────────────────────── -->
+            <div class="et-card" style="margin-bottom:16px;">
+                <div class="et-card__body">
+                    <div class="et-card__title">Spending Trends</div>
+                    <div class="et-chart-wrap--trend">
+                        <canvas id="trendChart"></canvas>
                     </div>
                 </div>
             </div>
 
+            <!-- ── CATEGORY BOXES ────────────────────── -->
             <div class="et-card">
-                <div class="et-stat">
-                    <div class="et-stat__label">Top Category</div>
-                    <div class="et-stat__value" style="color:var(--amber); font-size:1.15rem;">
-                        {% if category_data %}{{ category_data | sort(attribute=1) | last | first }}{% else %}—{% endif
-                        %}
+                <div class="et-card__body">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                        <div class="et-card__title" style="margin-bottom:0;">Spending by Category</div>
+                        <span style="font-size:0.75rem; color:var(--text-3);">Set a budget per category to track
+                            progress</span>
                     </div>
+                    <div class="et-cat-grid" id="catGrid"></div>
                 </div>
             </div>
 
-        </div>
+        </div><!-- /et-page -->
 
-        <!-- SPENDING TREND -->
-        <div class="et-card" style="margin-bottom:16px;">
-            <div class="et-card__body">
-                <div class="et-card__title">Spending Trends</div>
-                <div class="et-chart-wrap et-chart-wrap--trend">
-                    <canvas id="trendChart"></canvas>
-                </div>
-            </div>
-        </div>
+        <!-- ── TOAST ──────────────────────────────── -->
+        <div class="et-toast-wrap" id="toastWrap"></div>
 
-        <!-- CATEGORY BOXES -->
-        <div class="et-card">
-            <div class="et-card__body">
-                <div class="et-card__title">Spending by Category</div>
-                <div class="et-cat-grid" id="catGrid"></div>
-            </div>
-        </div>
+        <!-- ── SCRIPTS ────────────────────────────── -->
+        <script>
+            // ── DATA ────────────────────────────────────
+            const lim = {{ monthly_limit | tojson }};
+            const trendLabels = {{ monthly_data | map(attribute = 0) | list | tojson }};
+            const trendValues = {{ monthly_data | map(attribute = 1) | list | tojson }};
+            const catLabelsRaw = {{ category_data | map(attribute = 0) | list | tojson }};
+            const catValuesRaw = {{ category_data | map(attribute = 1) | list | tojson }};
+            const catBudgets = {{ cat_budgets | tojson }};   // {category: limit}
 
-    </div><!-- /et-page -->
+            // ── TREND CHART ──────────────────────────────
+            const avg = trendValues.length
+                ? trendValues.reduce((a, b) => a + b, 0) / trendValues.length : 0;
 
-    <script>
-        // ── DATA FROM FLASK ──────────────────────────────────────────
-        const lim = {{ monthly_limit | tojson }};
-        const trendLabels = {{ monthly_data | map(attribute = 0) | list | tojson }};
-        const trendValues = {{ monthly_data | map(attribute = 1) | list | tojson }};
-        const catLabelsRaw = {{ category_data | map(attribute = 0) | list | tojson }};
-        const catValuesRaw = {{ category_data | map(attribute = 1) | list | tojson }};
+            const barColors = trendValues.map(v => {
+                const p = (v / lim) * 100;
+                if (p < 50) return '#16a34a';
+                if (p < 80) return '#d97706';
+                return '#dc2626';
+            });
 
-        // ── TREND CHART ──────────────────────────────────────────────
-        const avg = trendValues.length
-            ? trendValues.reduce((a, b) => a + b, 0) / trendValues.length : 0;
-
-        const barColors = trendValues.map(v => {
-            const p = (v / lim) * 100;
-            if (p < 50) return "#16a34a";
-            if (p < 80) return "#d97706";
-            return "#dc2626";
-        });
-
-        new Chart(document.getElementById('trendChart'), {
-            type: 'bar',
-            data: {
-                labels: trendLabels,
-                datasets: [
-                    {
-                        label: 'Spent',
-                        data: trendValues,
-                        backgroundColor: barColors,
-                        borderRadius: 6,
-                        order: 2
-                    },
-                    {
-                        label: 'Budget ₹' + lim,
-                        data: trendLabels.map(() => lim),
-                        type: 'line',
-                        borderColor: '#dc2626',
-                        borderDash: [6, 4],
-                        borderWidth: 2,
-                        pointRadius: 0,
-                        fill: false,
-                        order: 0
-                    },
-                    {
-                        label: 'Avg ₹' + Math.round(avg),
-                        data: trendLabels.map(() => avg),
-                        type: 'line',
-                        borderColor: '#9ca3af',
-                        borderDash: [4, 4],
-                        borderWidth: 1.5,
-                        pointRadius: 0,
-                        fill: false,
-                        order: 1
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: true, labels: { boxWidth: 12, font: { family: 'Manrope', size: 12 } } },
-                    tooltip: {
-                        callbacks: {
-                            afterLabel: ctx => ctx.datasetIndex === 0
-                                ? ((ctx.parsed.y / lim) * 100).toFixed(1) + '% of budget'
-                                : ''
+            new Chart(document.getElementById('trendChart'), {
+                type: 'bar',
+                data: {
+                    labels: trendLabels,
+                    datasets: [
+                        {
+                            label: 'Spent',
+                            data: trendValues,
+                            backgroundColor: barColors,
+                            borderRadius: 6,
+                            order: 2
+                        },
+                        {
+                            label: `Budget ₹${lim}`,
+                            data: trendLabels.map(() => lim),
+                            type: 'line',
+                            borderColor: '#dc2626',
+                            borderDash: [6, 4],
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            fill: false,
+                            order: 0
+                        },
+                        {
+                            label: `Avg ₹${Math.round(avg)}`,
+                            data: trendLabels.map(() => avg),
+                            type: 'line',
+                            borderColor: '#9ca3af',
+                            borderDash: [4, 4],
+                            borderWidth: 1.5,
+                            pointRadius: 0,
+                            fill: false,
+                            order: 1
                         }
-                    }
+                    ]
                 },
-                scales: {
-                    y: { beginAtZero: true, grid: { color: 'rgba(150,150,150,0.08)' } },
-                    x: { grid: { display: false } }
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            labels: { boxWidth: 12, font: { family: 'Manrope', size: 12 } }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                afterLabel: ctx => ctx.datasetIndex === 0
+                                    ? `${((ctx.parsed.y / lim) * 100).toFixed(1)}% of budget`
+                                    : ''
+                            }
+                        }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: 'rgba(150,150,150,0.08)' } },
+                        x: { grid: { display: false } }
+                    }
                 }
+            });
+
+            // ── CATEGORY BOXES ───────────────────────────
+            const PRESETS = [
+                { key: 'food & drinks', label: 'Food & Drinks', icon: '🍽️' },
+                { key: 'travel', label: 'Travel', icon: '✈️' },
+                { key: 'shopping', label: 'Shopping', icon: '🛍️' },
+                { key: 'transportation', label: 'Transportation', icon: '🚗' },
+                { key: 'entertainment', label: 'Entertainment', icon: '⭐' },
+                { key: 'services', label: 'Services', icon: '💻' },
+                { key: 'health', label: 'Health', icon: '❤️' },
+                { key: 'home', label: 'Home', icon: '🏠' },
+                { key: 'utilities', label: 'Utilities', icon: '⚡' },
+                { key: 'others', label: 'Others', icon: '📌' },
+            ];
+
+            // Build normalized spend map
+            const rawMap = {};
+            catLabelsRaw.forEach((l, i) => {
+                rawMap[l.toLowerCase().trim()] = (rawMap[l.toLowerCase().trim()] || 0) + catValuesRaw[i];
+            });
+
+            // Match raw label → preset key
+            function matchPreset(rawLabel) {
+                const l = rawLabel.toLowerCase().trim();
+                for (const p of PRESETS) {
+                    if (l === p.key || l.includes(p.key) || p.key.includes(l)) return p.key;
+                }
+                return null;
             }
-        });
 
-        // ── CATEGORY BOXES ───────────────────────────────────────────
-        const PRESETS = [
-            { key: 'food', label: 'Food & Drinks', icon: '🍽️' },
-            { key: 'travel', label: 'Travel', icon: '✈️' },
-            { key: 'shopping', label: 'Shopping', icon: '🛍️' },
-            { key: 'transportation', label: 'Transportation', icon: '🚗' },
-            { key: 'entertainment', label: 'Entertainment', icon: '⭐' },
-            { key: 'services', label: 'Services', icon: '💻' },
-            { key: 'health', label: 'Health', icon: '❤️' },
-            { key: 'home', label: 'Home', icon: '🏠' },
-            { key: 'utilities', label: 'Utilities', icon: '⚡' },
-        ];
+            const spendByKey = {};
+            const extraCategories = [];
 
-        // Build normalized spend map (deduplicated)
-        const rawMap = {};
-        catLabelsRaw.forEach((l, i) => {
-            rawMap[l.toLowerCase().trim()] = (rawMap[l.toLowerCase().trim()] || 0) + catValuesRaw[i];
-        });
+            Object.entries(rawMap).forEach(([label, val]) => {
+                const key = matchPreset(label);
+                if (key) {
+                    spendByKey[key] = (spendByKey[key] || 0) + val;
+                } else {
+                    const customKey = '__' + label;
+                    spendByKey[customKey] = val;
+                    extraCategories.push({ key: customKey, label: label.charAt(0).toUpperCase() + label.slice(1), icon: '📌' });
+                }
+            });
 
-        // Match raw label → preset key
-        function matchPreset(rawLabel) {
-            const l = rawLabel.toLowerCase();
-            for (const p of PRESETS) {
-                if (l === p.key) return p.key;
-                if (l.includes(p.key)) return p.key;
-                if (p.key.includes(l)) return p.key;
-                if (p.label.toLowerCase().includes(l)) return p.key;
-            }
-            return null;
-        }
+            const allCategories = [...PRESETS, ...extraCategories];
+            const grid = document.getElementById('catGrid');
 
-        const spendByKey = {};
-        const extraCategories = [];
+            allCategories.forEach(cat => {
+                const amt = spendByKey[cat.key] || 0;
+                const hasSpend = amt > 0;
+                const budgetKey = cat.label; // match against Flask cat_budgets keys
+                const budget = catBudgets[budgetKey] || catBudgets[cat.key] || 0;
+                const budgetPct = budget > 0 ? Math.min((amt / budget) * 100, 100) : 0;
 
-        Object.entries(rawMap).forEach(([label, val]) => {
-            const key = matchPreset(label);
-            if (key) {
-                spendByKey[key] = (spendByKey[key] || 0) + val;
-            } else {
-                // Unrecognised — show as custom box
-                const customKey = '__' + label;
-                spendByKey[customKey] = val;
-                extraCategories.push({ key: customKey, label: label.charAt(0).toUpperCase() + label.slice(1), icon: '📌' });
-            }
-        });
+                // Progress bar color
+                let barColor = '#16a34a';
+                if (budgetPct >= 80) barColor = '#dc2626';
+                else if (budgetPct >= 50) barColor = '#d97706';
 
-        const allCategories = [...PRESETS, ...extraCategories];
-        const grid = document.getElementById('catGrid');
+                const box = document.createElement('div');
+                box.className = 'et-cat-box' + (hasSpend ? ' et-cat-box--active' : '');
 
-        allCategories.forEach(cat => {
-            const amt = spendByKey[cat.key] || 0;
-            const hasSpend = amt > 0;
-            const box = document.createElement('div');
-            box.className = 'et-cat-box' + (hasSpend ? ' et-cat-box--active' : '');
-            box.innerHTML = `
+                box.innerHTML = `
     <div class="et-cat-box__icon">${cat.icon}</div>
     <div class="et-cat-box__label">${cat.label}</div>
-    <div class="et-cat-box__amount${hasSpend ? ' et-cat-box__amount--spent' : ''}">₹${amt.toFixed(2)}</div>
-  `;
-            grid.appendChild(box);
-        });
+    <div class="et-cat-box__amount${hasSpend ? ' et-cat-box__amount--spent' : ''}">
+      ₹${amt.toFixed(2)}
+    </div>
 
-        // ── THEME TOGGLE ─────────────────────────────────────────────
-        const toggle = document.getElementById('themeToggle');
-        const icon = document.getElementById('themeIcon');
-        const root = document.documentElement;
-        const saved = localStorage.getItem('theme') || 'light';
-        root.setAttribute('data-theme', saved);
-        toggle.checked = saved === 'dark';
-        icon.textContent = saved === 'dark' ? '☽' : '☀';
-        toggle.addEventListener('change', () => {
-            const t = toggle.checked ? 'dark' : 'light';
-            root.setAttribute('data-theme', t);
-            localStorage.setItem('theme', t);
-            icon.textContent = t === 'dark' ? '☽' : '☀';
-        });
-    </script>
+    ${budget > 0 ? `
+    <div class="et-progress" title="${budgetPct.toFixed(1)}% of ₹${budget} budget">
+      <div class="et-progress__fill" style="width:${budgetPct}%; background:${barColor};"></div>
+    </div>
+    <div style="font-size:0.68rem; color:var(--text-3); margin-top:4px;">
+      ₹${amt.toFixed(0)} / ₹${budget} budget
+    </div>
+    ` : ''}
+
+    <!-- Budget setter -->
+    <div class="et-cat-box__budget-row">
+      <input
+        type="number"
+        class="et-cat-box__budget-input"
+        placeholder="Set budget"
+        value="${budget > 0 ? budget : ''}"
+        data-category="${cat.label}"
+        min="1">
+      <button class="et-cat-box__budget-btn" data-category="${cat.label}">Set</button>
+    </div>
+  `;
+
+                grid.appendChild(box);
+            });
+
+            // Budget save handlers
+            document.getElementById('catGrid').addEventListener('click', async e => {
+                if (!e.target.matches('.et-cat-box__budget-btn')) return;
+                const category = e.target.dataset.category;
+                const input = e.target.previousElementSibling;
+                const val = parseFloat(input.value);
+                if (!val || val <= 0) return showToast('Enter a valid budget amount', true);
+
+                const res = await fetch('/api/set-category-budget', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ category, limit: val })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast(`Budget set for ${category} ✓`);
+                    setTimeout(() => location.reload(), 800);
+                }
+            });
+
+            // ── TOAST ───────────────────────────────────
+            function showToast(msg, isError = false) {
+                const wrap = document.getElementById('toastWrap');
+                const toast = document.createElement('div');
+                toast.className = 'et-toast' + (isError ? ' et-toast--error' : '');
+                toast.innerHTML = `<span>${isError ? '⚠' : '✓'}</span> ${msg}`;
+                wrap.appendChild(toast);
+                setTimeout(() => toast.remove(), 3200);
+            }
+
+            // ── THEME ────────────────────────────────────
+            const toggle = document.getElementById('themeToggle');
+            const icon = document.getElementById('themeIcon');
+            const root = document.documentElement;
+            const saved = localStorage.getItem('theme') || 'light';
+            root.setAttribute('data-theme', saved);
+            toggle.checked = saved === 'dark';
+            icon.textContent = saved === 'dark' ? '☽' : '☀';
+            toggle.addEventListener('change', () => {
+                const t = toggle.checked ? 'dark' : 'light';
+                root.setAttribute('data-theme', t);
+                localStorage.setItem('theme', t);
+                icon.textContent = t === 'dark' ? '☽' : '☀';
+            });
+        </script>
+
 </body>
 
 </html>

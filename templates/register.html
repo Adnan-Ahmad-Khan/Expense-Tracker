@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Expense Tracker — Create Account</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .et-auth-page {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .et-auth-page::before {
+            content: '';
+            position: fixed;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(45, 110, 247, 0.08) 0%, transparent 70%);
+            top: -150px;
+            right: -150px;
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .et-auth-page::after {
+            content: '';
+            position: fixed;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(22, 163, 74, 0.06) 0%, transparent 70%);
+            bottom: -100px;
+            left: -100px;
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .et-input-wrap {
+            position: relative;
+        }
+
+        .et-input-icon {
+            position: absolute;
+            left: 13px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-3);
+            font-size: 0.9rem;
+            pointer-events: none;
+        }
+
+        .et-input-wrap .et-input {
+            padding-left: 36px;
+        }
+
+        /* password strength bar */
+        .et-pwd-strength {
+            margin-top: 6px;
+            height: 4px;
+            border-radius: 99px;
+            background: var(--surface-2);
+            overflow: hidden;
+        }
+
+        .et-pwd-strength__fill {
+            height: 100%;
+            border-radius: 99px;
+            transition: width 0.3s, background 0.3s;
+            width: 0%;
+        }
+
+        .et-pwd-hint {
+            font-size: 0.72rem;
+            color: var(--text-3);
+            margin-top: 4px;
+        }
+
+        .et-theme-corner {
+            position: fixed;
+            top: 16px;
+            right: 20px;
+        }
+
+        /* feature bullets */
+        .et-feature-list {
+            list-style: none;
+            margin: 0 0 24px 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+        }
+
+        .et-feature-list li {
+            font-size: 0.8rem;
+            color: var(--text-2);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .et-feature-list li span.tick {
+            color: var(--green);
+            font-size: 0.75rem;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="et-theme-corner">
+        <label class="et-toggle" title="Toggle theme">
+            <input type="checkbox" id="themeToggle">
+            <span id="themeIcon">☀</span>
+        </label>
+    </div>
+
+    <div class="et-auth-page">
+        <div class="et-auth-card">
+
+            <!-- Brand -->
+            <div class="et-auth-card__brand">
+                <span
+                    style="width:9px;height:9px;background:var(--accent);border-radius:50%;display:inline-block;"></span>
+                Expense Tracker
+            </div>
+
+            <!-- Heading -->
+            <div class="et-auth-card__title">Create your account</div>
+            <div class="et-auth-card__sub">Start tracking your expenses in seconds</div>
+
+            <!-- Feature bullets -->
+            <ul class="et-feature-list">
+                <li><span class="tick">✔</span> Personal dashboard with spending insights</li>
+                <li><span class="tick">✔</span> Category budgets & monthly limits</li>
+                <li><span class="tick">✔</span> Export to CSV anytime</li>
+            </ul>
+
+            <!-- Error -->
+            {% if error %}
+            <div class="et-error-box">⚠ {{ error }}</div>
+            {% endif %}
+
+            <!-- Form -->
+            <form method="POST" action="{{ url_for('register') }}">
+                <div class="et-stack">
+
+                    <div>
+                        <label class="et-form-label">Full name</label>
+                        <div class="et-input-wrap">
+                            <span class="et-input-icon">👤</span>
+                            <input type="text" name="name" class="et-input" placeholder="Your name" autocomplete="name"
+                                required>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="et-form-label">Email address</label>
+                        <div class="et-input-wrap">
+                            <span class="et-input-icon">✉</span>
+                            <input type="email" name="email" class="et-input" placeholder="you@example.com"
+                                autocomplete="email" required>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="et-form-label">Password</label>
+                        <div class="et-input-wrap">
+                            <span class="et-input-icon">🔒</span>
+                            <input type="password" name="password" id="passwordInput" class="et-input"
+                                placeholder="Min. 6 characters" autocomplete="new-password" required>
+                        </div>
+                        <div class="et-pwd-strength">
+                            <div class="et-pwd-strength__fill" id="pwdBar"></div>
+                        </div>
+                        <div class="et-pwd-hint" id="pwdHint">Enter a password</div>
+                    </div>
+
+                    <button type="submit" class="et-btn et-btn--primary"
+                        style="width:100%; margin-top:6px; padding:11px;">
+                        Create account →
+                    </button>
+
+                </div>
+            </form>
+
+            <div style="display:flex;align-items:center;gap:12px;color:var(--text-3);font-size:0.75rem;margin:20px 0;">
+                <div style="flex:1;height:1px;background:var(--border);"></div>
+                or
+                <div style="flex:1;height:1px;background:var(--border);"></div>
+            </div>
+
+            <div class="et-auth-card__footer">
+                Already have an account?
+                <a href="{{ url_for('login') }}">Sign in</a>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // Password strength meter
+        const pwdInput = document.getElementById('passwordInput');
+        const pwdBar = document.getElementById('pwdBar');
+        const pwdHint = document.getElementById('pwdHint');
+
+        pwdInput.addEventListener('input', () => {
+            const val = pwdInput.value;
+            let score = 0;
+            if (val.length >= 6) score++;
+            if (val.length >= 10) score++;
+            if (/[A-Z]/.test(val)) score++;
+            if (/[0-9]/.test(val)) score++;
+            if (/[^A-Za-z0-9]/.test(val)) score++;
+
+            const levels = [
+                { pct: '0%', color: 'transparent', label: 'Enter a password' },
+                { pct: '25%', color: '#dc2626', label: 'Weak' },
+                { pct: '50%', color: '#d97706', label: 'Fair' },
+                { pct: '75%', color: '#2d6ef7', label: 'Good' },
+                { pct: '100%', color: '#16a34a', label: 'Strong' },
+            ];
+            const lvl = levels[Math.min(score, 4)];
+            pwdBar.style.width = lvl.pct;
+            pwdBar.style.background = lvl.color;
+            pwdHint.textContent = val.length === 0 ? 'Enter a password' : lvl.label;
+            pwdHint.style.color = lvl.color === 'transparent' ? 'var(--text-3)' : lvl.color;
+        });
+
+        // Theme
+        const toggle = document.getElementById('themeToggle');
+        const icon = document.getElementById('themeIcon');
+        const root = document.documentElement;
+        const saved = localStorage.getItem('theme') || 'light';
+        root.setAttribute('data-theme', saved);
+        toggle.checked = saved === 'dark';
+        icon.textContent = saved === 'dark' ? '☽' : '☀';
+        toggle.addEventListener('change', () => {
+            const t = toggle.checked ? 'dark' : 'light';
+            root.setAttribute('data-theme', t);
+            localStorage.setItem('theme', t);
+            icon.textContent = t === 'dark' ? '☽' : '☀';
+        });
+    </script>
+</body>
+
+</html>

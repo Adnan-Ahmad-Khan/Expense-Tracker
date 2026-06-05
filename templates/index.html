@@ -16,15 +16,17 @@
 
 <body>
 
-    <!-- NAV -->
+    <!-- ── NAVBAR ─────────────────────────────── -->
     <nav class="et-nav">
         <a href="{{ url_for('home') }}" class="et-nav__brand">
             <span class="et-nav__brand-dot"></span>Expense Tracker
         </a>
         <div class="et-nav__links">
+            <span class="et-nav__user">Hi, {{ user.name.split()[0] }} 👋</span>
             <a href="{{ url_for('home') }}" class="et-nav__link et-nav__link--active">Dashboard</a>
             <a href="{{ url_for('analytics') }}" class="et-nav__link">Analytics</a>
             <a href="{{ url_for('expense_history') }}" class="et-nav__link">History</a>
+            <a href="{{ url_for('logout') }}" class="et-nav__link" style="color:var(--red-soft);">Logout</a>
             <label class="et-toggle" title="Toggle theme">
                 <input type="checkbox" id="themeToggle">
                 <span id="themeIcon">☀</span>
@@ -32,15 +34,15 @@
         </div>
     </nav>
 
+    <!-- ── PAGE ──────────────────────────────── -->
     <div class="et-page">
 
-        <!-- PAGE HEADER -->
         <div class="et-page-header">
             <h1>Dashboard</h1>
             <p>Track and manage your spending</p>
         </div>
 
-        <!-- TOP ROW: summary + add expense -->
+        <!-- TOP ROW -->
         <div class="et-grid-2" style="margin-bottom:16px; align-items:start;">
 
             <!-- SUMMARY CARD -->
@@ -50,13 +52,26 @@
                         <div>
                             <div class="et-card__label">Monthly Spending</div>
                             <div class="et-summary__amount">
-                                ₹{{ "%.0f"|format(total_spent) }}<span>/ {{ monthly_limit }}</span>
+                                ₹{{ "%.0f"|format(total_spent) }}<span>/ <span id="limitDisplay"
+                                        title="Click to edit">{{ monthly_limit | int }}</span></span>
                             </div>
-                            {% set pct = ((total_spent / monthly_limit) * 100) | round(1) %}
+                            <!-- inline limit editor -->
+                            <div class="et-summary__limit-wrap">
+                                <span>Monthly limit:</span>
+                                <span id="limitDisplay2"
+                                    style="font-weight:600;color:var(--text-2);cursor:pointer;border-bottom:1px dashed var(--text-3);"
+                                    title="Click to edit">
+                                    ₹{{ monthly_limit | int }}
+                                </span>
+                                <input type="number" id="limitInput" placeholder="{{ monthly_limit | int }}" min="1">
+                                <button id="limitSaveBtn" class="et-btn et-btn--primary et-btn--sm"
+                                    style="display:none;">Save</button>
+                            </div>
                         </div>
                         <div class="et-donut-wrap">
                             <canvas id="limitChart"></canvas>
                             <div class="et-donut-label">
+                                {% set pct = ((total_spent / monthly_limit) * 100) | round(1) %}
                                 <span class="et-donut-label__pct">{{ pct | int }}%</span>
                                 <span class="et-donut-label__sub">used</span>
                             </div>
@@ -69,15 +84,17 @@
             <div class="et-card">
                 <div class="et-card__body--lg">
                     <div class="et-card__title">Add Expense</div>
-                    <form method="POST">
-                        <div style="display:flex; flex-direction:column; gap:12px;">
+                    <form method="POST" id="addForm">
+                        <div class="et-stack">
+
                             <div>
                                 <label class="et-form-label">Amount (₹)</label>
                                 <input type="number" name="amount" class="et-input" placeholder="0" required>
                             </div>
+
                             <div>
                                 <label class="et-form-label">Category</label>
-                                <select name="category" class="et-input" required id="categorySelect">
+                                <select name="category" class="et-input" required>
                                     <option value="" disabled selected>Select a category…</option>
                                     <option value="Food & Drinks">🍽️ Food & Drinks</option>
                                     <option value="Travel">✈️ Travel</option>
@@ -91,33 +108,73 @@
                                     <option value="Others">📌 Others</option>
                                 </select>
                             </div>
-                            <button type="submit" class="et-btn et-btn--primary" style="margin-top:4px;">Add
-                                Expense</button>
+
+                            <div>
+                                <label class="et-form-label">Notes (optional)</label>
+                                <input type="text" name="notes" class="et-input"
+                                    placeholder="e.g. Team lunch, Flight ticket…">
+                            </div>
+
+                            <!-- Recurring toggle -->
+                            <div>
+                                <label class="et-check-row">
+                                    <input type="checkbox" name="is_recurring" id="recurringCheck">
+                                    <span>Recurring expense</span>
+                                </label>
+                                <div class="et-recurrence-select" id="recurrenceWrap">
+                                    <select name="recurrence" class="et-input" style="margin-top:8px;">
+                                        <option value="weekly">Weekly</option>
+                                        <option value="monthly" selected>Monthly</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="et-btn et-btn--primary" style="margin-top:2px;">
+                                Add Expense
+                            </button>
+
                         </div>
                     </form>
                 </div>
             </div>
 
-        </div>
+        </div><!-- /top row -->
 
-        <!-- FILTER BAR -->
-        <form method="GET">
+        <!-- FILTER + SEARCH BAR -->
+        <form method="GET" id="filterForm">
             <div class="et-formbar" style="margin-bottom:24px;">
                 <span class="et-formbar__label">Filter</span>
-                <select name="month" class="et-formbar__input" onchange="this.form.submit()" style="max-width:160px;">
+
+                <select name="month" class="et-formbar__input" onchange="this.form.submit()" style="max-width:150px;">
                     <option value="">All Months</option>
                     {% for m in months %}
                     <option value="{{ m }}" {% if selected_month==m %}selected{% endif %}>{{ m }}</option>
                     {% endfor %}
                 </select>
+
                 <div class="et-divider"></div>
+
                 <select name="category" class="et-formbar__input" onchange="this.form.submit()"
-                    style="max-width:160px;">
+                    style="max-width:165px;">
                     <option value="">All Categories</option>
                     {% for c in categories %}
                     <option value="{{ c }}" {% if selected_category==c %}selected{% endif %}>{{ c }}</option>
                     {% endfor %}
                 </select>
+
+                <div class="et-divider"></div>
+
+                <!-- Live search -->
+                <div class="et-search" style="min-width:200px;">
+                    <span class="et-search__icon">🔍</span>
+                    <input type="text" name="q" value="{{ search_query }}" placeholder="Search category or notes…"
+                        id="searchInput">
+                </div>
+
+                {% if selected_month or selected_category or search_query %}
+                <a href="{{ url_for('home') }}" class="et-btn et-btn--ghost et-btn--sm">Clear</a>
+                {% endif %}
+
             </div>
         </form>
 
@@ -136,6 +193,7 @@
                             <tr>
                                 <th>Date</th>
                                 <th>Category</th>
+                                <th>Notes</th>
                                 <th class="text-right">Amount</th>
                                 <th class="text-right">Actions</th>
                             </tr>
@@ -144,46 +202,144 @@
                             {% for exp in expenses[:8] %}
                             <tr>
                                 <td class="text-muted-col">{{ exp.date.strftime('%d %b %Y') }}</td>
-                                <td><span class="et-pill">{{ exp.category }}</span></td>
+                                <td>
+                                    <span class="et-pill">{{ exp.category }}</span>
+                                    {% if exp.is_recurring %}
+                                    <span class="et-recurring-badge" style="margin-left:4px;">
+                                        ↻ {{ exp.recurrence }}
+                                    </span>
+                                    {% endif %}
+                                </td>
+                                <td class="et-notes-col">{{ exp.notes or '—' }}</td>
                                 <td class="text-right et-amount">₹{{ "%.0f"|format(exp.amount) }}</td>
                                 <td class="text-right" style="white-space:nowrap;">
                                     <a href="{{ url_for('edit', id=exp.id) }}" class="et-btn et-btn--warning-ghost"
                                         style="margin-right:6px;">Edit</a>
-                                    <a href="{{ url_for('delete', id=exp.id) }}"
-                                        class="et-btn et-btn--danger-ghost">Delete</a>
+                                    <a href="{{ url_for('delete', id=exp.id) }}" class="et-btn et-btn--danger-ghost"
+                                        onclick="return confirm('Delete this expense?')">Delete</a>
                                 </td>
                             </tr>
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
+
                 {% else %}
-                <div class="et-empty">No expenses yet — add one above!</div>
+                <div class="et-empty">
+                    <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="8" y="16" width="48" height="36" rx="6" stroke="currentColor" stroke-width="2.5"
+                            fill="none" />
+                        <path d="M8 26h48" stroke="currentColor" stroke-width="2.5" />
+                        <circle cx="20" cy="36" r="3" fill="currentColor" opacity="0.4" />
+                        <rect x="28" y="34" width="16" height="4" rx="2" fill="currentColor" opacity="0.3" />
+                    </svg>
+                    <div class="et-empty__title">No expenses yet</div>
+                    <div>Add your first expense using the form above</div>
+                </div>
                 {% endif %}
+
             </div>
         </div>
 
     </div><!-- /et-page -->
 
+    <!-- ── TOAST CONTAINER ────────────────────── -->
+    <div class="et-toast-wrap" id="toastWrap"></div>
+
+    <!-- ── SCRIPTS ────────────────────────────── -->
     <script>
+        // ── DONUT ──────────────────────────────────
         const spent = {{ total_spent | tojson }};
         const lim = {{ monthly_limit | tojson }};
         const remaining = Math.max(lim - spent, 0);
         const pct = (spent / lim) * 100;
 
         function donutColor(p) {
-            if (p < 50) return "#16a34a";
-            if (p < 80) return "#d97706";
-            return "#dc2626";
+            if (p < 50) return '#16a34a';
+            if (p < 80) return '#d97706';
+            return '#dc2626';
         }
 
         new Chart(document.getElementById('limitChart'), {
             type: 'doughnut',
-            data: { datasets: [{ data: [spent, remaining], backgroundColor: [donutColor(pct), 'rgba(150,150,150,0.12)'], borderWidth: 0 }] },
-            options: { cutout: '78%', plugins: { legend: { display: false } }, animation: { animateRotate: true, duration: 900 } }
+            data: {
+                datasets: [{
+                    data: [spent, remaining],
+                    backgroundColor: [donutColor(pct), 'rgba(150,150,150,0.12)'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                cutout: '78%',
+                plugins: { legend: { display: false } },
+                animation: { animateRotate: true, duration: 900 }
+            }
         });
 
-        // Theme
+        // ── INLINE LIMIT EDIT ──────────────────────
+        const display = document.getElementById('limitDisplay2');
+        const input = document.getElementById('limitInput');
+        const saveBtn = document.getElementById('limitSaveBtn');
+
+        display.addEventListener('click', () => {
+            display.style.display = 'none';
+            input.style.display = 'inline-block';
+            saveBtn.style.display = 'inline-block';
+            input.focus();
+        });
+
+        saveBtn.addEventListener('click', async () => {
+            const val = parseFloat(input.value);
+            if (!val || val <= 0) return showToast('Enter a valid limit', true);
+            const res = await fetch('/api/set-limit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ limit: val })
+            });
+            const data = await res.json();
+            if (data.success) {
+                display.textContent = '₹' + val;
+                display.style.display = 'inline';
+                input.style.display = 'none';
+                saveBtn.style.display = 'none';
+                showToast('Monthly limit updated ✓');
+                setTimeout(() => location.reload(), 800);
+            }
+        });
+
+        input.addEventListener('keydown', e => { if (e.key === 'Enter') saveBtn.click(); });
+
+        // ── RECURRING TOGGLE ───────────────────────
+        document.getElementById('recurringCheck').addEventListener('change', function () {
+            const wrap = document.getElementById('recurrenceWrap');
+            wrap.classList.toggle('visible', this.checked);
+        });
+
+        // ── SEARCH DEBOUNCE ────────────────────────
+        let searchTimer;
+        document.getElementById('searchInput').addEventListener('input', function () {
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(() => {
+                document.getElementById('filterForm').submit();
+            }, 450);
+        });
+
+        // ── TOAST ──────────────────────────────────
+        function showToast(msg, isError = false) {
+            const wrap = document.getElementById('toastWrap');
+            const toast = document.createElement('div');
+            toast.className = 'et-toast' + (isError ? ' et-toast--error' : '');
+            toast.innerHTML = `<span>${isError ? '⚠' : '✓'}</span> ${msg}`;
+            wrap.appendChild(toast);
+            setTimeout(() => toast.remove(), 3200);
+        }
+
+        // Show toast if expense was just added (detect via URL param)
+        {% if request.method == 'GET' and request.args.get('added') %}
+        showToast('Expense added successfully ✓');
+        {% endif %}
+
+        // ── THEME ──────────────────────────────────
         const toggle = document.getElementById('themeToggle');
         const icon = document.getElementById('themeIcon');
         const root = document.documentElement;
@@ -198,6 +354,7 @@
             icon.textContent = t === 'dark' ? '☽' : '☀';
         });
     </script>
+
 </body>
 
 </html>

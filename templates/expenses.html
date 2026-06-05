@@ -8,21 +8,24 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-        href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 
 <body>
 
+    <!-- ── NAVBAR ─────────────────────────────── -->
     <nav class="et-nav">
         <a href="{{ url_for('home') }}" class="et-nav__brand">
             <span class="et-nav__brand-dot"></span>Expense Tracker
         </a>
         <div class="et-nav__links">
+            <span class="et-nav__user">Hi, {{ user.name.split()[0] }} 👋</span>
             <a href="{{ url_for('home') }}" class="et-nav__link">Dashboard</a>
             <a href="{{ url_for('analytics') }}" class="et-nav__link">Analytics</a>
             <a href="{{ url_for('expense_history') }}" class="et-nav__link et-nav__link--active">History</a>
+            <a href="{{ url_for('logout') }}" class="et-nav__link" style="color:var(--red-soft);">Logout</a>
             <label class="et-toggle" title="Toggle theme">
                 <input type="checkbox" id="themeToggle">
                 <span id="themeIcon">☀</span>
@@ -31,13 +34,61 @@
     </nav>
 
     <div class="et-page">
+
+        <!-- PAGE HEADER -->
         <div class="et-page-header">
             <h1>Expense History</h1>
             <p>All your recorded transactions</p>
         </div>
 
+        <!-- SEARCH + EXPORT BAR -->
+        <form method="GET" id="searchForm">
+            <div class="et-formbar" style="margin-bottom:20px;">
+
+                <span class="et-formbar__label">Search</span>
+
+                <div class="et-search" style="flex:1; min-width:220px;">
+                    <span class="et-search__icon">🔍</span>
+                    <input type="text" name="q" id="searchInput" value="{{ search_q }}"
+                        placeholder="Search by category or notes…">
+                </div>
+
+                {% if search_q %}
+                <a href="{{ url_for('expense_history') }}" class="et-btn et-btn--ghost et-btn--sm">Clear</a>
+                {% endif %}
+
+                <!-- spacer -->
+                <div style="flex:1;"></div>
+
+                <!-- Summary chips -->
+                {% if expenses %}
+                <div style="display:flex; align-items:center; gap:10px; flex-shrink:0;">
+                    <div style="font-size:0.78rem; color:var(--text-2);">
+                        <span style="font-weight:700; color:var(--text);">{{ expenses | length }}</span> transactions
+                    </div>
+                    <div style="width:1px; height:16px; background:var(--border);"></div>
+                    <div style="font-size:0.78rem; color:var(--text-2);">
+                        Total: <span style="font-weight:700; color:var(--red);">
+                            ₹{{ "%.0f"|format(expenses | sum(attribute='amount')) }}
+                        </span>
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="et-divider"></div>
+
+                <!-- CSV Export -->
+                <a href="{{ url_for('export_csv') }}" class="et-btn et-btn--green et-btn--sm" style="flex-shrink:0;">
+                    ⬇ Export CSV
+                </a>
+
+            </div>
+        </form>
+
+        <!-- TABLE CARD -->
         <div class="et-card">
             <div class="et-card__body">
+
                 {% if expenses %}
                 <div style="overflow-x:auto;">
                     <table class="et-table">
@@ -45,6 +96,8 @@
                             <tr>
                                 <th>Date</th>
                                 <th>Category</th>
+                                <th>Notes</th>
+                                <th>Recurring</th>
                                 <th class="text-right">Amount</th>
                                 <th class="text-right">Actions</th>
                             </tr>
@@ -53,27 +106,89 @@
                             {% for exp in expenses %}
                             <tr>
                                 <td class="text-muted-col">{{ exp.date.strftime('%d %b %Y') }}</td>
+
                                 <td><span class="et-pill">{{ exp.category }}</span></td>
+
+                                <td class="et-notes-col" title="{{ exp.notes or '' }}">
+                                    {{ exp.notes or '—' }}
+                                </td>
+
+                                <td>
+                                    {% if exp.is_recurring %}
+                                    <span class="et-recurring-badge">↻ {{ exp.recurrence }}</span>
+                                    {% else %}
+                                    <span style="color:var(--text-3); font-size:0.78rem;">—</span>
+                                    {% endif %}
+                                </td>
+
                                 <td class="text-right et-amount">₹{{ "%.0f"|format(exp.amount) }}</td>
+
                                 <td class="text-right" style="white-space:nowrap;">
                                     <a href="{{ url_for('edit', id=exp.id) }}" class="et-btn et-btn--warning-ghost"
                                         style="margin-right:6px;">Edit</a>
-                                    <a href="{{ url_for('delete', id=exp.id) }}"
-                                        class="et-btn et-btn--danger-ghost">Delete</a>
+                                    <a href="{{ url_for('delete', id=exp.id) }}" class="et-btn et-btn--danger-ghost"
+                                        onclick="return confirm('Delete this expense?')">Delete</a>
                                 </td>
                             </tr>
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
+
+                <!-- Table footer summary -->
+                <div style="
+        display:flex; justify-content:flex-end; align-items:center;
+        gap:24px; padding:14px 16px 0; border-top:1px solid var(--border);
+        margin-top:4px;">
+                    <span style="font-size:0.8rem; color:var(--text-3);">
+                        {{ expenses | length }} record{% if expenses | length != 1 %}s{% endif %}
+                    </span>
+                    <span style="font-size:0.88rem; font-weight:700; color:var(--red);">
+                        Total: ₹{{ "%.0f"|format(expenses | sum(attribute='amount')) }}
+                    </span>
+                </div>
+
                 {% else %}
-                <div class="et-empty">No expenses recorded yet.</div>
+
+                <!-- Empty state -->
+                <div class="et-empty">
+                    <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="8" y="16" width="48" height="36" rx="6" stroke="currentColor" stroke-width="2.5"
+                            fill="none" />
+                        <path d="M8 26h48" stroke="currentColor" stroke-width="2.5" />
+                        <circle cx="20" cy="36" r="3" fill="currentColor" opacity="0.4" />
+                        <rect x="28" y="34" width="16" height="4" rx="2" fill="currentColor" opacity="0.3" />
+                    </svg>
+                    {% if search_q %}
+                    <div class="et-empty__title">No results for "{{ search_q }}"</div>
+                    <div>Try a different keyword or <a href="{{ url_for('expense_history') }}"
+                            style="color:var(--accent);">clear search</a></div>
+                    {% else %}
+                    <div class="et-empty__title">No expenses recorded yet</div>
+                    <div>Head to the <a href="{{ url_for('home') }}" style="color:var(--accent);">Dashboard</a> to add
+                        your first one</div>
+                    {% endif %}
+                </div>
+
                 {% endif %}
+
             </div>
         </div>
-    </div>
 
+    </div><!-- /et-page -->
+
+    <!-- ── SCRIPTS ────────────────────────────── -->
     <script>
+        // Live search — debounced
+        let searchTimer;
+        document.getElementById('searchInput').addEventListener('input', function () {
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(() => {
+                document.getElementById('searchForm').submit();
+            }, 450);
+        });
+
+        // Theme
         const toggle = document.getElementById('themeToggle');
         const icon = document.getElementById('themeIcon');
         const root = document.documentElement;
@@ -88,6 +203,7 @@
             icon.textContent = t === 'dark' ? '☽' : '☀';
         });
     </script>
+
 </body>
 
 </html>

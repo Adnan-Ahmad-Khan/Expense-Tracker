@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Expense Tracker — Login</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        /* extra polish specific to auth pages */
+        .et-auth-page {
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* subtle animated gradient blob in background */
+        .et-auth-page::before {
+            content: '';
+            position: fixed;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(45, 110, 247, 0.08) 0%, transparent 70%);
+            top: -150px;
+            right: -150px;
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .et-auth-page::after {
+            content: '';
+            position: fixed;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(22, 163, 74, 0.06) 0%, transparent 70%);
+            bottom: -100px;
+            left: -100px;
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .et-input-wrap {
+            position: relative;
+        }
+
+        .et-input-icon {
+            position: absolute;
+            left: 13px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-3);
+            font-size: 0.9rem;
+            pointer-events: none;
+        }
+
+        .et-input-wrap .et-input {
+            padding-left: 36px;
+        }
+
+        .et-divider-text {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: var(--text-3);
+            font-size: 0.75rem;
+            margin: 20px 0;
+        }
+
+        .et-divider-text::before,
+        .et-divider-text::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+
+        .et-theme-corner {
+            position: fixed;
+            top: 16px;
+            right: 20px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Theme toggle floating -->
+    <div class="et-theme-corner">
+        <label class="et-toggle" title="Toggle theme">
+            <input type="checkbox" id="themeToggle">
+            <span id="themeIcon">☀</span>
+        </label>
+    </div>
+
+    <div class="et-auth-page">
+        <div class="et-auth-card">
+
+            <!-- Brand -->
+            <div class="et-auth-card__brand">
+                <span
+                    style="width:9px;height:9px;background:var(--accent);border-radius:50%;display:inline-block;"></span>
+                Expense Tracker
+            </div>
+
+            <!-- Heading -->
+            <div class="et-auth-card__title">Welcome back</div>
+            <div class="et-auth-card__sub">Sign in to your account to continue</div>
+
+            <!-- Error -->
+            {% if error %}
+            <div class="et-error-box">⚠ {{ error }}</div>
+            {% endif %}
+
+            <!-- Form -->
+            <form method="POST" action="{{ url_for('login') }}">
+                <div class="et-stack">
+
+                    <div>
+                        <label class="et-form-label">Email address</label>
+                        <div class="et-input-wrap">
+                            <span class="et-input-icon">✉</span>
+                            <input type="email" name="email" class="et-input" placeholder="you@example.com"
+                                autocomplete="email" required>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="et-form-label">Password</label>
+                        <div class="et-input-wrap">
+                            <span class="et-input-icon">🔒</span>
+                            <input type="password" name="password" class="et-input" placeholder="••••••••"
+                                autocomplete="current-password" required>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="et-btn et-btn--primary"
+                        style="width:100%; margin-top:6px; padding:11px;">
+                        Sign in →
+                    </button>
+
+                </div>
+            </form>
+
+            <div class="et-divider-text">or</div>
+
+            <div class="et-auth-card__footer">
+                Don't have an account?
+                <a href="{{ url_for('register') }}">Create one free</a>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        const toggle = document.getElementById('themeToggle');
+        const icon = document.getElementById('themeIcon');
+        const root = document.documentElement;
+        const saved = localStorage.getItem('theme') || 'light';
+        root.setAttribute('data-theme', saved);
+        toggle.checked = saved === 'dark';
+        icon.textContent = saved === 'dark' ? '☽' : '☀';
+        toggle.addEventListener('change', () => {
+            const t = toggle.checked ? 'dark' : 'light';
+            root.setAttribute('data-theme', t);
+            localStorage.setItem('theme', t);
+            icon.textContent = t === 'dark' ? '☽' : '☀';
+        });
+    </script>
+</body>
+
+</html>
