@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Expense Tracker — Settings</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+
+    <!-- ── NAVBAR ─────────────────────────────── -->
+    <nav class="et-nav">
+        <a href="{{ url_for('home') }}" class="et-nav__brand">
+            <span class="et-nav__brand-dot"></span>Expense Tracker
+        </a>
+        <div class="et-nav__links">
+            <!-- User dropdown -->
+            <div class="et-nav__user-wrap">
+                <button class="et-nav__user-btn">
+                    <div class="et-nav__avatar">{{ user.name[0].upper() }}</div>
+                    {{ user.name.split()[0] }}
+                    <span style="font-size:0.65rem; opacity:0.6;">▾</span>
+                </button>
+                <div class="et-nav__dropdown">
+                    <div style="padding:10px 14px 8px;">
+                        <div style="font-size:0.82rem; font-weight:700; color:var(--text);">{{ user.name }}</div>
+                        <div style="font-size:0.75rem; color:var(--text-3);">{{ user.email }}</div>
+                    </div>
+                    <div class="et-nav__dropdown-divider"></div>
+                    <a href="{{ url_for('home') }}" class="et-nav__dropdown-item">🏠 Dashboard</a>
+                    <a href="{{ url_for('analytics') }}" class="et-nav__dropdown-item">📊 Analytics</a>
+                    <a href="{{ url_for('settings') }}" class="et-nav__dropdown-item" style="color:var(--accent);">⚙️
+                        Settings</a>
+                    <div class="et-nav__dropdown-divider"></div>
+                    <a href="{{ url_for('switch_account') }}" class="et-nav__dropdown-item">🔄 Switch Account</a>
+                    <a href="{{ url_for('logout') }}" class="et-nav__dropdown-item et-nav__dropdown-item--danger">🚪
+                        Logout</a>
+                </div>
+            </div>
+            <a href="{{ url_for('home') }}" class="et-nav__link">Dashboard</a>
+            <a href="{{ url_for('analytics') }}" class="et-nav__link">Analytics</a>
+            <a href="{{ url_for('expense_history') }}" class="et-nav__link">History</a>
+            <a href="{{ url_for('settings') }}" class="et-nav__link et-nav__link--active">Settings</a>
+            <label class="et-toggle" title="Toggle theme">
+                <input type="checkbox" id="themeToggle">
+                <span id="themeIcon">☀</span>
+            </label>
+        </div>
+    </nav>
+
+    <div class="et-page">
+
+        <div class="et-page-header">
+            <h1>Settings</h1>
+            <p>Manage your account, preferences and security</p>
+        </div>
+
+        <!-- ── ALERTS ──────────────────────────── -->
+        {% if error %}
+        <div class="et-error-box" style="margin-bottom:20px;">⚠ {{ error }}</div>
+        {% endif %}
+        {% if success %}
+        <div class="et-success-box" style="margin-bottom:20px;">✓ {{ success }}</div>
+        {% endif %}
+
+        <div class="et-settings-grid">
+
+            <!-- ── SIDEBAR NAV ───────────────────── -->
+            <div class="et-settings-nav" id="settingsNav">
+                <button class="et-settings-nav-item et-settings-nav-item--active" data-section="profile">
+                    👤 Profile
+                </button>
+                <button class="et-settings-nav-item" data-section="security">
+                    🔒 Security
+                </button>
+                <button class="et-settings-nav-item" data-section="preferences">
+                    🎨 Preferences
+                </button>
+                <button class="et-settings-nav-item" data-section="danger" style="margin-top:auto;">
+                    ⚠️ Danger Zone
+                </button>
+            </div>
+
+            <!-- ── SECTIONS ──────────────────────── -->
+            <div>
+
+                <!-- PROFILE -->
+                <div class="et-settings-section et-settings-section--active" id="section-profile">
+                    <div class="et-card">
+                        <div class="et-card__body--lg">
+                            <div class="et-card__title">Profile Information</div>
+
+                            <!-- Avatar preview -->
+                            <div style="display:flex; align-items:center; gap:16px; margin-bottom:24px;
+                        padding:16px; background:var(--surface-2); border-radius:var(--radius-sm);
+                        border:1px solid var(--border);">
+                                <div style="width:52px; height:52px; border-radius:50%; background:var(--accent);
+                          display:flex; align-items:center; justify-content:center;
+                          font-family:'Plus Jakarta Sans',sans-serif; font-size:1.3rem;
+                          font-weight:800; color:#fff; flex-shrink:0;" id="avatarPreview">
+                                    {{ user.name[0].upper() }}
+                                </div>
+                                <div>
+                                    <div style="font-weight:700; font-size:0.95rem;" id="namePreview">{{ user.name }}
+                                    </div>
+                                    <div style="font-size:0.78rem; color:var(--text-3);">{{ user.email }}</div>
+                                    <div style="font-size:0.72rem; color:var(--text-3); margin-top:2px;">
+                                        Member since {{ user.created_at.strftime('%b %Y') }}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <form method="POST">
+                                <input type="hidden" name="action" value="profile">
+                                <div class="et-stack">
+                                    <div>
+                                        <label class="et-form-label">Full Name</label>
+                                        <input type="text" name="name" class="et-input" value="{{ user.name }}"
+                                            id="nameInput" required>
+                                    </div>
+                                    <div>
+                                        <label class="et-form-label">Email Address</label>
+                                        <input type="email" name="email" class="et-input" value="{{ user.email }}"
+                                            required>
+                                    </div>
+                                    <button type="submit" class="et-btn et-btn--primary"
+                                        style="align-self:flex-start; padding:9px 24px;">
+                                        Save Profile
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECURITY -->
+                <div class="et-settings-section" id="section-security">
+                    <div class="et-card">
+                        <div class="et-card__body--lg">
+                            <div class="et-card__title">Change Password</div>
+                            <form method="POST">
+                                <input type="hidden" name="action" value="password">
+                                <div class="et-stack">
+                                    <div>
+                                        <label class="et-form-label">Current Password</label>
+                                        <div class="et-input-wrap">
+                                            <span class="et-input-icon">🔒</span>
+                                            <input type="password" name="current_password" class="et-input"
+                                                placeholder="Enter current password" required>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="et-form-label">New Password</label>
+                                        <div class="et-input-wrap">
+                                            <span class="et-input-icon">🔑</span>
+                                            <input type="password" name="new_password" id="newPwd" class="et-input"
+                                                placeholder="Min. 6 characters" required>
+                                        </div>
+                                        <div class="et-pwd-strength">
+                                            <div class="et-pwd-strength__fill" id="pwdBar"></div>
+                                        </div>
+                                        <div class="et-pwd-hint" id="pwdHint">Enter a new password</div>
+                                    </div>
+                                    <div>
+                                        <label class="et-form-label">Confirm New Password</label>
+                                        <div class="et-input-wrap">
+                                            <span class="et-input-icon">🔑</span>
+                                            <input type="password" name="confirm_password" id="confirmPwd"
+                                                class="et-input" placeholder="Repeat new password" required>
+                                        </div>
+                                        <div id="matchHint" style="font-size:0.7rem; margin-top:4px;"></div>
+                                    </div>
+                                    <button type="submit" class="et-btn et-btn--primary"
+                                        style="align-self:flex-start; padding:9px 24px;">
+                                        Update Password
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- JWT info box -->
+                    <div class="et-card" style="margin-top:16px;">
+                        <div class="et-card__body">
+                            <div style="display:flex; align-items:flex-start; gap:12px;">
+                                <span style="font-size:1.3rem;">🛡️</span>
+                                <div>
+                                    <div style="font-size:0.85rem; font-weight:700; margin-bottom:4px;">Secured with JWT
+                                        Authentication</div>
+                                    <div style="font-size:0.78rem; color:var(--text-2); line-height:1.6;">
+                                        Your session is managed via a signed <strong>JSON Web Token</strong> stored in
+                                        an httpOnly cookie.
+                                        Passwords are hashed with <strong>bcrypt</strong>. Tokens expire after 7 days.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PREFERENCES -->
+                <div class="et-settings-section" id="section-preferences">
+                    <div class="et-card">
+                        <div class="et-card__body--lg">
+                            <div class="et-card__title">App Preferences</div>
+                            <form method="POST" id="prefsForm">
+                                <input type="hidden" name="action" value="preferences">
+                                <div class="et-stack">
+
+                                    <!-- Currency -->
+                                    <div>
+                                        <label class="et-form-label">Currency</label>
+                                        <input type="hidden" name="currency" id="currencyInput"
+                                            value="{{ user.currency }}">
+                                        <div class="et-currency-grid" style="margin-top:8px;">
+                                            {% for code, symbol in currencies.items() %}
+                                            <button type="button"
+                                                class="et-currency-btn {% if user.currency == symbol %}et-currency-btn--active{% endif %}"
+                                                data-symbol="{{ symbol }}" data-code="{{ code }}">
+                                                {{ symbol }} {{ code }}
+                                            </button>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+
+                                    <!-- Monthly limit -->
+                                    <div>
+                                        <label class="et-form-label">Monthly Budget Limit</label>
+                                        <input type="number" name="monthly_limit" class="et-input"
+                                            value="{{ user.monthly_limit | int }}" min="1" placeholder="5000">
+                                    </div>
+
+                                    <!-- Theme -->
+                                    <div>
+                                        <label class="et-form-label">Theme</label>
+                                        <div style="display:flex; gap:10px; margin-top:8px;">
+                                            <button type="button"
+                                                class="et-theme-opt {% if user.theme == 'light' %}et-theme-opt--active{% endif %}"
+                                                data-theme="light" style="flex:1; padding:12px; border-radius:var(--radius-sm);
+                      border:2px solid {% if user.theme == 'light' %}var(--accent){% else %}var(--border){% endif %};
+                      background:var(--surface-2); cursor:pointer; font-family:'Manrope',sans-serif;
+                      font-size:0.85rem; font-weight:600; color:var(--text); transition:all var(--transition);">
+                                                ☀ Light
+                                            </button>
+                                            <button type="button"
+                                                class="et-theme-opt {% if user.theme == 'dark' %}et-theme-opt--active{% endif %}"
+                                                data-theme="dark" style="flex:1; padding:12px; border-radius:var(--radius-sm);
+                      border:2px solid {% if user.theme == 'dark' %}var(--accent){% else %}var(--border){% endif %};
+                      background:var(--surface-2); cursor:pointer; font-family:'Manrope',sans-serif;
+                      font-size:0.85rem; font-weight:600; color:var(--text); transition:all var(--transition);">
+                                                ☽ Dark
+                                            </button>
+                                        </div>
+                                        <input type="hidden" name="theme" id="themeInput" value="{{ user.theme }}">
+                                    </div>
+
+                                    <button type="submit" class="et-btn et-btn--primary"
+                                        style="align-self:flex-start; padding:9px 24px;">
+                                        Save Preferences
+                                    </button>
+
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- DANGER ZONE -->
+                <div class="et-settings-section" id="section-danger">
+                    <div class="et-card" style="border-color:rgba(220,38,38,0.25);">
+                        <div class="et-card__body--lg">
+                            <div class="et-card__title" style="color:var(--red);">⚠️ Danger Zone</div>
+
+                            <div style="background:var(--red-soft); border:1px solid rgba(220,38,38,0.18);
+                        border-radius:var(--radius-sm); padding:16px; margin-bottom:20px;">
+                                <div style="font-size:0.85rem; font-weight:700; color:var(--red); margin-bottom:4px;">
+                                    Delete Account
+                                </div>
+                                <div style="font-size:0.8rem; color:var(--text-2); line-height:1.6;">
+                                    This will permanently delete your account, all your expenses, budgets and data.
+                                    <strong>This action cannot be undone.</strong>
+                                </div>
+                            </div>
+
+                            <form method="POST" id="deleteForm">
+                                <input type="hidden" name="action" value="delete_account">
+                                <div class="et-stack">
+                                    <div>
+                                        <label class="et-form-label">Type <strong>DELETE</strong> to confirm</label>
+                                        <input type="text" name="confirm_delete" class="et-input" placeholder="DELETE"
+                                            id="deleteConfirm" autocomplete="off">
+                                    </div>
+                                    <button type="submit" class="et-btn et-btn--danger" id="deleteBtn" disabled
+                                        style="align-self:flex-start; padding:9px 24px; opacity:0.4;">
+                                        Delete My Account
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Export data first -->
+                    <div class="et-card" style="margin-top:16px;">
+                        <div class="et-card__body">
+                            <div
+                                style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                                <div>
+                                    <div style="font-size:0.87rem; font-weight:700; margin-bottom:3px;">Export your data
+                                        first</div>
+                                    <div style="font-size:0.78rem; color:var(--text-2);">Download all your expenses as
+                                        CSV before deleting.</div>
+                                </div>
+                                <a href="{{ url_for('export_csv') }}" class="et-btn et-btn--green et-btn--sm">⬇ Export
+                                    CSV</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div><!-- /sections -->
+        </div><!-- /settings-grid -->
+    </div><!-- /et-page -->
+
+    <!-- ── TOAST ──────────────────────────────── -->
+    <div class="et-toast-wrap" id="toastWrap"></div>
+
+    <!-- ── SCRIPTS ────────────────────────────── -->
+    <script>
+        // ── SETTINGS NAV ───────────────────────────
+        const navBtns = document.querySelectorAll('.et-settings-nav-item');
+        const sections = document.querySelectorAll('.et-settings-section');
+
+        // Read active section from URL hash
+        const initSection = location.hash.replace('#', '') || 'profile';
+        activateSection(initSection);
+
+        navBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const sec = btn.dataset.section;
+                activateSection(sec);
+                location.hash = sec;
+            });
+        });
+
+        function activateSection(name) {
+            navBtns.forEach(b => b.classList.toggle('et-settings-nav-item--active', b.dataset.section === name));
+            sections.forEach(s => s.classList.toggle('et-settings-section--active', s.id === 'section-' + name));
+        }
+
+        // ── AVATAR LIVE PREVIEW ─────────────────────
+        document.getElementById('nameInput').addEventListener('input', function () {
+            const v = this.value.trim();
+            document.getElementById('avatarPreview').textContent = v ? v[0].toUpperCase() : '?';
+            document.getElementById('namePreview').textContent = v || 'Your Name';
+        });
+
+        // ── PASSWORD STRENGTH ───────────────────────
+        const pwdInput = document.getElementById('newPwd');
+        const pwdBar = document.getElementById('pwdBar');
+        const pwdHint = document.getElementById('pwdHint');
+        const confirmPwd = document.getElementById('confirmPwd');
+        const matchHint = document.getElementById('matchHint');
+
+        pwdInput.addEventListener('input', () => {
+            const v = pwdInput.value;
+            let score = 0;
+            if (v.length >= 6) score++;
+            if (v.length >= 10) score++;
+            if (/[A-Z]/.test(v)) score++;
+            if (/[0-9]/.test(v)) score++;
+            if (/[^A-Za-z0-9]/.test(v)) score++;
+            const levels = [
+                { pct: '0%', color: 'transparent', label: 'Enter a password' },
+                { pct: '25%', color: '#dc2626', label: 'Weak' },
+                { pct: '50%', color: '#d97706', label: 'Fair' },
+                { pct: '75%', color: '#2d6ef7', label: 'Good' },
+                { pct: '100%', color: '#16a34a', label: 'Strong' },
+            ];
+            const lvl = levels[Math.min(score, 4)];
+            pwdBar.style.width = lvl.pct;
+            pwdBar.style.background = lvl.color;
+            pwdHint.textContent = v.length === 0 ? 'Enter a new password' : lvl.label;
+            pwdHint.style.color = lvl.color === 'transparent' ? 'var(--text-3)' : lvl.color;
+            checkMatch();
+        });
+
+        confirmPwd.addEventListener('input', checkMatch);
+
+        function checkMatch() {
+            if (!confirmPwd.value) { matchHint.textContent = ''; return; }
+            if (pwdInput.value === confirmPwd.value) {
+                matchHint.textContent = '✓ Passwords match';
+                matchHint.style.color = 'var(--green)';
+            } else {
+                matchHint.textContent = '✗ Passwords do not match';
+                matchHint.style.color = 'var(--red)';
+            }
+        }
+
+        // ── CURRENCY PICKER ─────────────────────────
+        const currencyInput = document.getElementById('currencyInput');
+        document.querySelectorAll('.et-currency-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.et-currency-btn').forEach(b => b.classList.remove('et-currency-btn--active'));
+                btn.classList.add('et-currency-btn--active');
+                currencyInput.value = btn.dataset.symbol;
+            });
+        });
+
+        // ── DROPDOWN ────────────────────────────────
+        const userWrap = document.querySelector('.et-nav__user-wrap');
+        const dropdown = document.querySelector('.et-nav__dropdown');
+        if (userWrap && dropdown) {
+            userWrap.querySelector('.et-nav__user-btn').addEventListener('click', e => {
+                e.stopPropagation();
+                dropdown.classList.toggle('open');
+            });
+            document.addEventListener('click', () => dropdown.classList.remove('open'));
+            dropdown.addEventListener('click', e => e.stopPropagation());
+        }
+
+        // ── THEME PICKER ────────────────────────────
+        const themeInput = document.getElementById('themeInput');
+        document.querySelectorAll('.et-theme-opt').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const t = btn.dataset.theme;
+                themeInput.value = t;
+                document.querySelectorAll('.et-theme-opt').forEach(b => {
+                    b.style.borderColor = 'var(--border)';
+                });
+                btn.style.borderColor = 'var(--accent)';
+                // Live preview
+                document.documentElement.setAttribute('data-theme', t);
+                localStorage.setItem('theme', t);
+                // Sync toggle
+                document.getElementById('themeToggle').checked = t === 'dark';
+                document.getElementById('themeIcon').textContent = t === 'dark' ? '☽' : '☀';
+            });
+        });
+
+        // ── DELETE CONFIRM ──────────────────────────
+        const deleteConfirm = document.getElementById('deleteConfirm');
+        const deleteBtn = document.getElementById('deleteBtn');
+        deleteConfirm.addEventListener('input', () => {
+            const ok = deleteConfirm.value === 'DELETE';
+            deleteBtn.disabled = !ok;
+            deleteBtn.style.opacity = ok ? '1' : '0.4';
+        });
+
+        // ── TOAST ───────────────────────────────────
+        function showToast(msg, type = 'success') {
+            const wrap = document.getElementById('toastWrap');
+            const toast = document.createElement('div');
+            toast.className = `et-toast et-toast--${type === 'error' ? 'error' : type === 'warning' ? 'warning' : 'info'}`;
+            toast.innerHTML = `<span>${type === 'error' ? '⚠' : '✓'}</span> ${msg}`;
+            wrap.appendChild(toast);
+            setTimeout(() => toast.remove(), 3200);
+        }
+
+        {% if success %} showToast("{{ success }}"); {% endif %}
+        {% if error %} showToast("{{ error }}", 'error'); {% endif %}
+
+        // ── THEME TOGGLE ────────────────────────────
+        const toggle = document.getElementById('themeToggle');
+        const icon = document.getElementById('themeIcon');
+        const root = document.documentElement;
+        const saved = localStorage.getItem('theme') || '{{ user.theme }}';
+        root.setAttribute('data-theme', saved);
+        toggle.checked = saved === 'dark';
+        icon.textContent = saved === 'dark' ? '☽' : '☀';
+        toggle.addEventListener('change', () => {
+            const t = toggle.checked ? 'dark' : 'light';
+            root.setAttribute('data-theme', t);
+            localStorage.setItem('theme', t);
+            icon.textContent = t === 'dark' ? '☽' : '☀';
+            // Save to DB too
+            fetch('/api/save-theme', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ theme: t })
+            });
+        });
+    </script>
+
+</body>
+
+</html>

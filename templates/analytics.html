@@ -22,11 +22,30 @@
             <span class="et-nav__brand-dot"></span>Expense Tracker
         </a>
         <div class="et-nav__links">
-            <span class="et-nav__user">Hi, {{ user.name.split()[0] }} 👋</span>
+            <div class="et-nav__user-wrap">
+                <button class="et-nav__user-btn">
+                    <div class="et-nav__avatar">{{ user.name[0].upper() }}</div>
+                    {{ user.name.split()[0] }}
+                    <span style="font-size:0.65rem; opacity:0.6;">▾</span>
+                </button>
+                <div class="et-nav__dropdown">
+                    <div style="padding:10px 14px 8px;">
+                        <div style="font-size:0.82rem; font-weight:700; color:var(--text);">{{ user.name }}</div>
+                        <div style="font-size:0.75rem; color:var(--text-3);">{{ user.email }}</div>
+                    </div>
+                    <div class="et-nav__dropdown-divider"></div>
+                    <a href="{{ url_for('settings') }}" class="et-nav__dropdown-item">⚙️ Settings</a>
+                    <a href="{{ url_for('export_csv') }}" class="et-nav__dropdown-item">⬇️ Export CSV</a>
+                    <div class="et-nav__dropdown-divider"></div>
+                    <a href="{{ url_for('switch_account') }}" class="et-nav__dropdown-item">🔄 Switch Account</a>
+                    <a href="{{ url_for('logout') }}" class="et-nav__dropdown-item et-nav__dropdown-item--danger">🚪
+                        Logout</a>
+                </div>
+            </div>
             <a href="{{ url_for('home') }}" class="et-nav__link">Dashboard</a>
             <a href="{{ url_for('analytics') }}" class="et-nav__link et-nav__link--active">Analytics</a>
             <a href="{{ url_for('expense_history') }}" class="et-nav__link">History</a>
-            <a href="{{ url_for('logout') }}" class="et-nav__link" style="color:var(--red-soft);">Logout</a>
+            <a href="{{ url_for('settings') }}" class="et-nav__link">Settings</a>
             <label class="et-toggle" title="Toggle theme">
                 <input type="checkbox" id="themeToggle">
                 <span id="themeIcon">☀</span>
@@ -38,18 +57,17 @@
 
         <div class="et-page-header">
             <h1>Analytics</h1>
-            <p>Understand your spending patterns</p>
+            <p>Understand your spending patterns at a glance</p>
         </div>
 
         <!-- ── STAT PILLS ───────────────────────── -->
         <div class="et-grid-4" style="margin-bottom:16px;">
 
-            <!-- Total Spent -->
-            <div class="et-card">
+            <div class="et-card et-card--tilt">
                 <div class="et-stat">
                     <div class="et-stat__label">Total Spent</div>
                     <div class="et-stat__value" style="color:var(--red);">
-                        ₹{{ "%.0f"|format(total_spent) }}
+                        {{ user.currency }}<span data-counter="{{ total_spent | int }}">0</span>
                     </div>
                     {% if mom_change is not none %}
                     <div class="et-stat__change
@@ -58,30 +76,31 @@
           {% else %}et-stat__change--flat{% endif %}">
                         {% if mom_change > 0 %}↑{% elif mom_change < 0 %}↓{% else %}→{% endif %} {{ mom_change | abs }}%
                             vs last month </div>
+                            {% else %}
+                            <div class="et-stat__change et-stat__change--flat">No previous month data</div>
                             {% endif %}
                     </div>
                 </div>
 
-                <!-- Monthly Limit -->
-                <div class="et-card">
+                <div class="et-card et-card--tilt">
                     <div class="et-stat">
                         <div class="et-stat__label">Monthly Limit</div>
-                        <div class="et-stat__value">₹{{ monthly_limit | int }}</div>
+                        <div class="et-stat__value">{{ user.currency }}{{ monthly_limit | int }}</div>
                         <div class="et-stat__change et-stat__change--flat">
-                            {% set used_pct = ((total_spent / monthly_limit) * 100) | round(1) %}
-                            {{ used_pct }}% used
+                            {% set used_pct = ((total_spent / monthly_limit) * 100) | round(1) if monthly_limit > 0 else
+                            0 %}
+                            {{ used_pct }}% used this month
                         </div>
                     </div>
                 </div>
 
-                <!-- Avg / Month -->
-                <div class="et-card">
+                <div class="et-card et-card--tilt">
                     <div class="et-stat">
                         <div class="et-stat__label">Avg / Month</div>
                         <div class="et-stat__value" style="color:var(--accent);">
                             {% if monthly_data %}
-                            ₹{{ "%.0f"|format((monthly_data | map(attribute=1) | list | sum) / (monthly_data | length))
-                            }}
+                            {{ user.currency }}<span
+                                data-counter="{{ ((monthly_data | map(attribute=1) | list | sum) / (monthly_data | length)) | int }}">0</span>
                             {% else %}—{% endif %}
                         </div>
                         <div class="et-stat__change et-stat__change--flat">
@@ -90,18 +109,18 @@
                     </div>
                 </div>
 
-                <!-- Top Category -->
-                <div class="et-card">
+                <div class="et-card et-card--tilt">
                     <div class="et-stat">
                         <div class="et-stat__label">Top Category</div>
-                        <div class="et-stat__value" style="color:var(--amber); font-size:1.15rem; margin-top:4px;">
-                            {% if category_data %}
-                            {{ category_data | sort(attribute=1) | last | first }}
-                            {% else %}—{% endif %}
+                        <div class="et-stat__value"
+                            style="color:var(--amber); font-size:1.05rem; margin-top:4px; letter-spacing:-0.01em;">
+                            {% if category_data %}{{ category_data | sort(attribute=1) | last | first }}{% else %}—{%
+                            endif %}
                         </div>
                         <div class="et-stat__change et-stat__change--flat">
                             {% if category_data %}
-                            ₹{{ "%.0f"|format(category_data | sort(attribute=1) | last | last) }} spent
+                            {{ user.currency }}{{ "%.0f"|format(category_data | sort(attribute=1) | last | last) }}
+                            spent
                             {% endif %}
                         </div>
                     </div>
@@ -112,7 +131,17 @@
             <!-- ── SPENDING TREND ────────────────────── -->
             <div class="et-card" style="margin-bottom:16px;">
                 <div class="et-card__body">
-                    <div class="et-card__title">Spending Trends</div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                        <div class="et-card__title" style="margin-bottom:0;">Spending Trends</div>
+                        <div style="display:flex; gap:10px; font-size:0.75rem; color:var(--text-3);">
+                            <span style="display:flex; align-items:center; gap:4px;"><span
+                                    style="width:10px;height:3px;background:#dc2626;display:inline-block;border-radius:2px;"></span>
+                                Budget</span>
+                            <span style="display:flex; align-items:center; gap:4px;"><span
+                                    style="width:10px;height:3px;background:#9ca3af;display:inline-block;border-radius:2px;"></span>
+                                Average</span>
+                        </div>
+                    </div>
                     <div class="et-chart-wrap--trend">
                         <canvas id="trendChart"></canvas>
                     </div>
@@ -124,7 +153,7 @@
                 <div class="et-card__body">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
                         <div class="et-card__title" style="margin-bottom:0;">Spending by Category</div>
-                        <span style="font-size:0.75rem; color:var(--text-3);">Set a budget per category to track
+                        <span style="font-size:0.73rem; color:var(--text-3);">Set a budget per box to track
                             progress</span>
                     </div>
                     <div class="et-cat-grid" id="catGrid"></div>
@@ -136,15 +165,31 @@
         <!-- ── TOAST ──────────────────────────────── -->
         <div class="et-toast-wrap" id="toastWrap"></div>
 
-        <!-- ── SCRIPTS ────────────────────────────── -->
         <script>
             // ── DATA ────────────────────────────────────
             const lim = {{ monthly_limit | tojson }};
+            const curr = {{ user.currency | tojson }};
             const trendLabels = {{ monthly_data | map(attribute = 0) | list | tojson }};
             const trendValues = {{ monthly_data | map(attribute = 1) | list | tojson }};
             const catLabelsRaw = {{ category_data | map(attribute = 0) | list | tojson }};
             const catValuesRaw = {{ category_data | map(attribute = 1) | list | tojson }};
-            const catBudgets = {{ cat_budgets | tojson }};   // {category: limit}
+            const catBudgets = {{ cat_budgets | tojson }};
+
+            // ── COUNTER ANIMATION ──────────────────────
+            function animateCounter(el, target, duration = 1200) {
+                let start = null;
+                const step = ts => {
+                    if (!start) start = ts;
+                    const p = Math.min((ts - start) / duration, 1);
+                    el.textContent = Math.round((1 - Math.pow(1 - p, 3)) * target).toLocaleString();
+                    if (p < 1) requestAnimationFrame(step);
+                    else el.textContent = target.toLocaleString();
+                };
+                requestAnimationFrame(step);
+            }
+            document.querySelectorAll('[data-counter]').forEach(el => {
+                animateCounter(el, parseInt(el.dataset.counter));
+            });
 
             // ── TREND CHART ──────────────────────────────
             const avg = trendValues.length
@@ -170,7 +215,7 @@
                             order: 2
                         },
                         {
-                            label: `Budget ₹${lim}`,
+                            label: `Budget`,
                             data: trendLabels.map(() => lim),
                             type: 'line',
                             borderColor: '#dc2626',
@@ -181,7 +226,7 @@
                             order: 0
                         },
                         {
-                            label: `Avg ₹${Math.round(avg)}`,
+                            label: `Avg`,
                             data: trendLabels.map(() => avg),
                             type: 'line',
                             borderColor: '#9ca3af',
@@ -197,20 +242,22 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                        legend: {
-                            display: true,
-                            labels: { boxWidth: 12, font: { family: 'Manrope', size: 12 } }
-                        },
+                        legend: { display: false },
                         tooltip: {
                             callbacks: {
-                                afterLabel: ctx => ctx.datasetIndex === 0
-                                    ? `${((ctx.parsed.y / lim) * 100).toFixed(1)}% of budget`
-                                    : ''
+                                label: ctx => {
+                                    if (ctx.datasetIndex === 0)
+                                        return ` ${curr}${ctx.parsed.y.toLocaleString()} (${((ctx.parsed.y / lim) * 100).toFixed(1)}% of budget)`;
+                                    return ` ${curr}${ctx.parsed.y.toLocaleString()}`;
+                                }
                             }
                         }
                     },
                     scales: {
-                        y: { beginAtZero: true, grid: { color: 'rgba(150,150,150,0.08)' } },
+                        y: {
+                            beginAtZero: true, grid: { color: 'rgba(150,150,150,0.07)' },
+                            ticks: { callback: v => curr + v.toLocaleString() }
+                        },
                         x: { grid: { display: false } }
                     }
                 }
@@ -230,15 +277,13 @@
                 { key: 'others', label: 'Others', icon: '📌' },
             ];
 
-            // Build normalized spend map
             const rawMap = {};
             catLabelsRaw.forEach((l, i) => {
                 rawMap[l.toLowerCase().trim()] = (rawMap[l.toLowerCase().trim()] || 0) + catValuesRaw[i];
             });
 
-            // Match raw label → preset key
-            function matchPreset(rawLabel) {
-                const l = rawLabel.toLowerCase().trim();
+            function matchPreset(label) {
+                const l = label.toLowerCase().trim();
                 for (const p of PRESETS) {
                     if (l === p.key || l.includes(p.key) || p.key.includes(l)) return p.key;
                 }
@@ -246,104 +291,115 @@
             }
 
             const spendByKey = {};
-            const extraCategories = [];
-
+            const extraCats = [];
             Object.entries(rawMap).forEach(([label, val]) => {
                 const key = matchPreset(label);
-                if (key) {
-                    spendByKey[key] = (spendByKey[key] || 0) + val;
-                } else {
-                    const customKey = '__' + label;
-                    spendByKey[customKey] = val;
-                    extraCategories.push({ key: customKey, label: label.charAt(0).toUpperCase() + label.slice(1), icon: '📌' });
+                if (key) spendByKey[key] = (spendByKey[key] || 0) + val;
+                else {
+                    const k = '__' + label;
+                    spendByKey[k] = val;
+                    extraCats.push({ key: k, label: label.charAt(0).toUpperCase() + label.slice(1), icon: '📌' });
                 }
             });
 
-            const allCategories = [...PRESETS, ...extraCategories];
+            const allCats = [...PRESETS, ...extraCats];
             const grid = document.getElementById('catGrid');
 
-            allCategories.forEach(cat => {
+            allCats.forEach((cat, idx) => {
                 const amt = spendByKey[cat.key] || 0;
                 const hasSpend = amt > 0;
-                const budgetKey = cat.label; // match against Flask cat_budgets keys
-                const budget = catBudgets[budgetKey] || catBudgets[cat.key] || 0;
+                const budget = catBudgets[cat.label] || catBudgets[cat.key] || 0;
                 const budgetPct = budget > 0 ? Math.min((amt / budget) * 100, 100) : 0;
-
-                // Progress bar color
                 let barColor = '#16a34a';
                 if (budgetPct >= 80) barColor = '#dc2626';
                 else if (budgetPct >= 50) barColor = '#d97706';
 
                 const box = document.createElement('div');
                 box.className = 'et-cat-box' + (hasSpend ? ' et-cat-box--active' : '');
+                box.style.animationDelay = (idx * 0.04) + 's';
+                box.style.animation = `pageFadeIn 0.35s ease both`;
 
                 box.innerHTML = `
     <div class="et-cat-box__icon">${cat.icon}</div>
     <div class="et-cat-box__label">${cat.label}</div>
     <div class="et-cat-box__amount${hasSpend ? ' et-cat-box__amount--spent' : ''}">
-      ₹${amt.toFixed(2)}
+      ${curr}${amt.toFixed(2)}
     </div>
-
     ${budget > 0 ? `
-    <div class="et-progress" title="${budgetPct.toFixed(1)}% of ₹${budget} budget">
-      <div class="et-progress__fill" style="width:${budgetPct}%; background:${barColor};"></div>
-    </div>
-    <div style="font-size:0.68rem; color:var(--text-3); margin-top:4px;">
-      ₹${amt.toFixed(0)} / ₹${budget} budget
-    </div>
+      <div class="et-progress" title="${budgetPct.toFixed(1)}% of ${curr}${budget} budget">
+        <div class="et-progress__fill" data-fill="${budgetPct}" style="background:${barColor};"></div>
+      </div>
+      <div style="font-size:0.67rem; color:var(--text-3); margin-top:3px;">
+        ${curr}${Math.round(amt)} / ${curr}${budget} limit
+      </div>
     ` : ''}
-
-    <!-- Budget setter -->
     <div class="et-cat-box__budget-row">
-      <input
-        type="number"
-        class="et-cat-box__budget-input"
-        placeholder="Set budget"
-        value="${budget > 0 ? budget : ''}"
-        data-category="${cat.label}"
-        min="1">
+      <input type="number" class="et-cat-box__budget-input"
+        placeholder="Set limit" value="${budget > 0 ? budget : ''}"
+        data-category="${cat.label}" min="1">
       <button class="et-cat-box__budget-btn" data-category="${cat.label}">Set</button>
     </div>
   `;
-
                 grid.appendChild(box);
             });
 
-            // Budget save handlers
-            document.getElementById('catGrid').addEventListener('click', async e => {
+            // Animate progress bars after render
+            requestAnimationFrame(() => {
+                document.querySelectorAll('.et-progress__fill[data-fill]').forEach(bar => {
+                    setTimeout(() => { bar.style.width = bar.dataset.fill + '%'; }, 100);
+                });
+            });
+
+            // Budget save
+            grid.addEventListener('click', async e => {
                 if (!e.target.matches('.et-cat-box__budget-btn')) return;
                 const category = e.target.dataset.category;
                 const input = e.target.previousElementSibling;
                 const val = parseFloat(input.value);
-                if (!val || val <= 0) return showToast('Enter a valid budget amount', true);
+                if (!val || val <= 0) return showToast('Enter a valid budget amount', 'error');
 
                 const res = await fetch('/api/set-category-budget', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ category, limit: val })
                 });
                 const data = await res.json();
                 if (data.success) {
                     showToast(`Budget set for ${category} ✓`);
-                    setTimeout(() => location.reload(), 800);
+                    // Show alerts for over-budget categories
+                    (data.alerts || []).forEach(a => {
+                        showToast(`⚠ ${a.category} is at ${a.pct}% of budget!`, 'warning');
+                    });
+                    setTimeout(() => location.reload(), 900);
                 }
             });
 
             // ── TOAST ───────────────────────────────────
-            function showToast(msg, isError = false) {
+            function showToast(msg, type = 'success') {
                 const wrap = document.getElementById('toastWrap');
                 const toast = document.createElement('div');
-                toast.className = 'et-toast' + (isError ? ' et-toast--error' : '');
-                toast.innerHTML = `<span>${isError ? '⚠' : '✓'}</span> ${msg}`;
+                toast.className = 'et-toast' + (type === 'error' ? ' et-toast--error' : type === 'warning' ? ' et-toast--warning' : '');
+                toast.innerHTML = `<span>${type === 'error' ? '⚠' : type === 'warning' ? '⚠' : '✓'}</span> ${msg}`;
                 wrap.appendChild(toast);
                 setTimeout(() => toast.remove(), 3200);
+            }
+
+            // ── DROPDOWN ────────────────────────────────
+            const userWrap = document.querySelector('.et-nav__user-wrap');
+            const dropdown = document.querySelector('.et-nav__dropdown');
+            if (userWrap && dropdown) {
+                userWrap.querySelector('.et-nav__user-btn').addEventListener('click', e => {
+                    e.stopPropagation();
+                    dropdown.classList.toggle('open');
+                });
+                document.addEventListener('click', () => dropdown.classList.remove('open'));
+                dropdown.addEventListener('click', e => e.stopPropagation());
             }
 
             // ── THEME ────────────────────────────────────
             const toggle = document.getElementById('themeToggle');
             const icon = document.getElementById('themeIcon');
             const root = document.documentElement;
-            const saved = localStorage.getItem('theme') || 'light';
+            const saved = localStorage.getItem('theme') || '{{ user.theme }}';
             root.setAttribute('data-theme', saved);
             toggle.checked = saved === 'dark';
             icon.textContent = saved === 'dark' ? '☽' : '☀';
@@ -352,6 +408,7 @@
                 root.setAttribute('data-theme', t);
                 localStorage.setItem('theme', t);
                 icon.textContent = t === 'dark' ? '☽' : '☀';
+                fetch('/api/save-theme', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ theme: t }) });
             });
         </script>
 

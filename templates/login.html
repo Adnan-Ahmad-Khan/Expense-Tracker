@@ -4,91 +4,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Expense Tracker — Login</title>
+    <title>Expense Tracker — Sign In</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
         href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <style>
-        /* extra polish specific to auth pages */
-        .et-auth-page {
-            position: relative;
-            overflow: hidden;
-        }
-
-        /* subtle animated gradient blob in background */
-        .et-auth-page::before {
-            content: '';
-            position: fixed;
-            width: 600px;
-            height: 600px;
-            background: radial-gradient(circle, rgba(45, 110, 247, 0.08) 0%, transparent 70%);
-            top: -150px;
-            right: -150px;
-            border-radius: 50%;
-            pointer-events: none;
-        }
-
-        .et-auth-page::after {
-            content: '';
-            position: fixed;
-            width: 400px;
-            height: 400px;
-            background: radial-gradient(circle, rgba(22, 163, 74, 0.06) 0%, transparent 70%);
-            bottom: -100px;
-            left: -100px;
-            border-radius: 50%;
-            pointer-events: none;
-        }
-
-        .et-input-wrap {
-            position: relative;
-        }
-
-        .et-input-icon {
-            position: absolute;
-            left: 13px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--text-3);
-            font-size: 0.9rem;
-            pointer-events: none;
-        }
-
-        .et-input-wrap .et-input {
-            padding-left: 36px;
-        }
-
-        .et-divider-text {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            color: var(--text-3);
-            font-size: 0.75rem;
-            margin: 20px 0;
-        }
-
-        .et-divider-text::before,
-        .et-divider-text::after {
-            content: '';
-            flex: 1;
-            height: 1px;
-            background: var(--border);
-        }
-
-        .et-theme-corner {
-            position: fixed;
-            top: 16px;
-            right: 20px;
-        }
-    </style>
 </head>
 
 <body>
 
-    <!-- Theme toggle floating -->
     <div class="et-theme-corner">
         <label class="et-toggle" title="Toggle theme">
             <input type="checkbox" id="themeToggle">
@@ -97,25 +23,24 @@
     </div>
 
     <div class="et-auth-page">
+        <div class="et-auth-blob et-auth-blob--1"></div>
+        <div class="et-auth-blob et-auth-blob--2"></div>
+
         <div class="et-auth-card">
 
-            <!-- Brand -->
             <div class="et-auth-card__brand">
                 <span
-                    style="width:9px;height:9px;background:var(--accent);border-radius:50%;display:inline-block;"></span>
+                    style="width:9px;height:9px;background:var(--accent);border-radius:50%;display:inline-block;animation:pulse 2.5s infinite;"></span>
                 Expense Tracker
             </div>
 
-            <!-- Heading -->
             <div class="et-auth-card__title">Welcome back</div>
             <div class="et-auth-card__sub">Sign in to your account to continue</div>
 
-            <!-- Error -->
             {% if error %}
             <div class="et-error-box">⚠ {{ error }}</div>
             {% endif %}
 
-            <!-- Form -->
             <form method="POST" action="{{ url_for('login') }}">
                 <div class="et-stack">
 
@@ -137,25 +62,44 @@
                         </div>
                     </div>
 
-                    <button type="submit" class="et-btn et-btn--primary"
-                        style="width:100%; margin-top:6px; padding:11px;">
+                    <button type="submit" class="et-btn et-btn--primary et-btn--full et-btn-magnetic"
+                        style="margin-top:4px; padding:11px;">
                         Sign in →
                     </button>
 
                 </div>
             </form>
 
-            <div class="et-divider-text">or</div>
+            <div style="display:flex;align-items:center;gap:12px;color:var(--text-3);font-size:0.73rem;margin:20px 0;">
+                <div style="flex:1;height:1px;background:var(--border);"></div>
+                or
+                <div style="flex:1;height:1px;background:var(--border);"></div>
+            </div>
 
             <div class="et-auth-card__footer">
-                Don't have an account?
-                <a href="{{ url_for('register') }}">Create one free</a>
+                Don't have an account? <a href="{{ url_for('register') }}">Create one free</a>
+            </div>
+
+            <div style="text-align:center; margin-top:10px;">
+                <a href="{{ url_for('landing') }}"
+                    style="font-size:0.75rem; color:var(--text-3); text-decoration:none;">
+                    ← Back to home
+                </a>
             </div>
 
         </div>
     </div>
 
     <script>
+        // Magnetic button
+        document.querySelectorAll('.et-btn-magnetic').forEach(btn => {
+            btn.addEventListener('mousemove', e => {
+                const r = btn.getBoundingClientRect();
+                btn.style.transform = `translate(${(e.clientX - r.left - r.width / 2) * 0.15}px,${(e.clientY - r.top - r.height / 2) * 0.15}px)`;
+            });
+            btn.addEventListener('mouseleave', () => { btn.style.transform = ''; });
+        });
+
         const toggle = document.getElementById('themeToggle');
         const icon = document.getElementById('themeIcon');
         const root = document.documentElement;

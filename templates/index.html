@@ -22,11 +22,33 @@
             <span class="et-nav__brand-dot"></span>Expense Tracker
         </a>
         <div class="et-nav__links">
-            <span class="et-nav__user">Hi, {{ user.name.split()[0] }} 👋</span>
+
+            <!-- User dropdown -->
+            <div class="et-nav__user-wrap">
+                <button class="et-nav__user-btn">
+                    <div class="et-nav__avatar">{{ user.name[0].upper() }}</div>
+                    {{ user.name.split()[0] }}
+                    <span style="font-size:0.65rem; opacity:0.6;">▾</span>
+                </button>
+                <div class="et-nav__dropdown">
+                    <div style="padding:10px 14px 8px;">
+                        <div style="font-size:0.82rem; font-weight:700; color:var(--text);">{{ user.name }}</div>
+                        <div style="font-size:0.75rem; color:var(--text-3);">{{ user.email }}</div>
+                    </div>
+                    <div class="et-nav__dropdown-divider"></div>
+                    <a href="{{ url_for('settings') }}" class="et-nav__dropdown-item">⚙️ Settings</a>
+                    <a href="{{ url_for('export_csv') }}" class="et-nav__dropdown-item">⬇️ Export CSV</a>
+                    <div class="et-nav__dropdown-divider"></div>
+                    <a href="{{ url_for('switch_account') }}" class="et-nav__dropdown-item">🔄 Switch Account</a>
+                    <a href="{{ url_for('logout') }}" class="et-nav__dropdown-item et-nav__dropdown-item--danger">🚪
+                        Logout</a>
+                </div>
+            </div>
+
             <a href="{{ url_for('home') }}" class="et-nav__link et-nav__link--active">Dashboard</a>
             <a href="{{ url_for('analytics') }}" class="et-nav__link">Analytics</a>
             <a href="{{ url_for('expense_history') }}" class="et-nav__link">History</a>
-            <a href="{{ url_for('logout') }}" class="et-nav__link" style="color:var(--red-soft);">Logout</a>
+            <a href="{{ url_for('settings') }}" class="et-nav__link">Settings</a>
             <label class="et-toggle" title="Toggle theme">
                 <input type="checkbox" id="themeToggle">
                 <span id="themeIcon">☀</span>
@@ -34,35 +56,33 @@
         </div>
     </nav>
 
-    <!-- ── PAGE ──────────────────────────────── -->
     <div class="et-page">
 
         <div class="et-page-header">
             <h1>Dashboard</h1>
-            <p>Track and manage your spending</p>
+            <p>Good to see you, {{ user.name.split()[0] }} — here's your spending overview</p>
         </div>
 
-        <!-- TOP ROW -->
+        <!-- ── TOP ROW ────────────────────────── -->
         <div class="et-grid-2" style="margin-bottom:16px; align-items:start;">
 
             <!-- SUMMARY CARD -->
-            <div class="et-card">
+            <div class="et-card et-card--tilt">
                 <div class="et-card__body--lg">
                     <div class="et-summary">
                         <div>
                             <div class="et-card__label">Monthly Spending</div>
                             <div class="et-summary__amount">
-                                ₹{{ "%.0f"|format(total_spent) }}<span>/ <span id="limitDisplay"
-                                        title="Click to edit">{{ monthly_limit | int }}</span></span>
+                                {{ user.currency }}<span id="spentCounter"
+                                    data-target="{{ total_spent | int }}">0</span>
+                                <span>/ <span id="limitDisplay2" title="Click to edit">{{ monthly_limit | int
+                                        }}</span></span>
                             </div>
-                            <!-- inline limit editor -->
                             <div class="et-summary__limit-wrap">
-                                <span>Monthly limit:</span>
-                                <span id="limitDisplay2"
-                                    style="font-weight:600;color:var(--text-2);cursor:pointer;border-bottom:1px dashed var(--text-3);"
-                                    title="Click to edit">
-                                    ₹{{ monthly_limit | int }}
-                                </span>
+                                <span>Limit:</span>
+                                <span id="limitDisplayText" style="font-weight:600; color:var(--text-2); cursor:pointer;
+                border-bottom:1px dashed var(--text-3); padding-bottom:1px;" title="Click to edit">{{ user.currency
+                                    }}{{ monthly_limit | int }}</span>
                                 <input type="number" id="limitInput" placeholder="{{ monthly_limit | int }}" min="1">
                                 <button id="limitSaveBtn" class="et-btn et-btn--primary et-btn--sm"
                                     style="display:none;">Save</button>
@@ -71,7 +91,8 @@
                         <div class="et-donut-wrap">
                             <canvas id="limitChart"></canvas>
                             <div class="et-donut-label">
-                                {% set pct = ((total_spent / monthly_limit) * 100) | round(1) %}
+                                {% set pct = ((total_spent / monthly_limit) * 100) | round(1) if monthly_limit > 0 else
+                                0 %}
                                 <span class="et-donut-label__pct">{{ pct | int }}%</span>
                                 <span class="et-donut-label__sub">used</span>
                             </div>
@@ -84,12 +105,13 @@
             <div class="et-card">
                 <div class="et-card__body--lg">
                     <div class="et-card__title">Add Expense</div>
-                    <form method="POST" id="addForm">
+                    <form method="POST" action="{{ url_for('home') }}">
                         <div class="et-stack">
 
                             <div>
-                                <label class="et-form-label">Amount (₹)</label>
-                                <input type="number" name="amount" class="et-input" placeholder="0" required>
+                                <label class="et-form-label">Amount ({{ user.currency }})</label>
+                                <input type="number" name="amount" id="amountInput" class="et-input" placeholder="0"
+                                    required>
                             </div>
 
                             <div>
@@ -110,12 +132,20 @@
                             </div>
 
                             <div>
-                                <label class="et-form-label">Notes (optional)</label>
+                                <label class="et-form-label">Notes <span
+                                        style="font-weight:400; text-transform:none; letter-spacing:0;">(optional)</span></label>
                                 <input type="text" name="notes" class="et-input"
                                     placeholder="e.g. Team lunch, Flight ticket…">
                             </div>
 
-                            <!-- Recurring toggle -->
+                            <div>
+                                <label class="et-form-label">Tags <span
+                                        style="font-weight:400; text-transform:none; letter-spacing:0;">(optional,
+                                        comma-separated)</span></label>
+                                <input type="text" name="tags" class="et-input"
+                                    placeholder="#work, #vacation, #personal…">
+                            </div>
+
                             <div>
                                 <label class="et-check-row">
                                     <input type="checkbox" name="is_recurring" id="recurringCheck">
@@ -129,7 +159,7 @@
                                 </div>
                             </div>
 
-                            <button type="submit" class="et-btn et-btn--primary" style="margin-top:2px;">
+                            <button type="submit" class="et-btn et-btn--primary et-btn--full" style="margin-top:2px;">
                                 Add Expense
                             </button>
 
@@ -140,12 +170,34 @@
 
         </div><!-- /top row -->
 
-        <!-- FILTER + SEARCH BAR -->
-        <form method="GET" id="filterForm">
-            <div class="et-formbar" style="margin-bottom:24px;">
+        <!-- ── INSIGHTS ───────────────────────── -->
+        {% if insights %}
+        <div class="et-card" style="margin-bottom:16px;">
+            <div class="et-card__body">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+                    <div class="et-card__title" style="margin-bottom:0;">💡 Spending Insights</div>
+                    <span style="font-size:0.72rem; color:var(--text-3);">Auto-generated from your data</span>
+                </div>
+                <div class="et-insights">
+                    {% for ins in insights %}
+                    <div class="et-insight et-insight--{{ ins.type }}"
+                        style="animation-delay:{{ loop.index0 * 0.08 }}s;">
+                        <span class="et-insight__icon">{{ ins.icon }}</span>
+                        <span class="et-insight__text">{{ ins.text }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- ── FILTER + SEARCH ────────────────── -->
+        <form method="GET" action="{{ url_for('home') }}" id="filterForm">
+            <div class="et-formbar" style="margin-bottom:16px;">
+
                 <span class="et-formbar__label">Filter</span>
 
-                <select name="month" class="et-formbar__input" onchange="this.form.submit()" style="max-width:150px;">
+                <select name="month" class="et-formbar__input" onchange="this.form.submit()" style="max-width:140px;">
                     <option value="">All Months</option>
                     {% for m in months %}
                     <option value="{{ m }}" {% if selected_month==m %}selected{% endif %}>{{ m }}</option>
@@ -155,7 +207,7 @@
                 <div class="et-divider"></div>
 
                 <select name="category" class="et-formbar__input" onchange="this.form.submit()"
-                    style="max-width:165px;">
+                    style="max-width:160px;">
                     <option value="">All Categories</option>
                     {% for c in categories %}
                     <option value="{{ c }}" {% if selected_category==c %}selected{% endif %}>{{ c }}</option>
@@ -164,25 +216,43 @@
 
                 <div class="et-divider"></div>
 
-                <!-- Live search -->
-                <div class="et-search" style="min-width:200px;">
+                <div class="et-search" style="flex:1; min-width:180px;">
                     <span class="et-search__icon">🔍</span>
-                    <input type="text" name="q" value="{{ search_query }}" placeholder="Search category or notes…"
-                        id="searchInput">
+                    <input type="text" name="q" id="searchInput" value="{{ search_query }}" placeholder="Search… ">
                 </div>
 
-                {% if selected_month or selected_category or search_query %}
+                {% if selected_month or selected_category or search_query or selected_tag %}
                 <a href="{{ url_for('home') }}" class="et-btn et-btn--ghost et-btn--sm">Clear</a>
                 {% endif %}
 
             </div>
+
+            <!-- Tag filters -->
+            {% if all_tags %}
+            <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:20px; align-items:center;">
+                <span
+                    style="font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.07em; color:var(--text-3);">Tags:</span>
+                {% for tag in all_tags %}
+                <a href="{{ url_for('home', tag=tag) }}"
+                    class="et-tag-filter {% if selected_tag == tag %}et-tag-filter--active{% endif %}">
+                    # {{ tag }}
+                </a>
+                {% endfor %}
+            </div>
+            {% endif %}
+
         </form>
 
-        <!-- TRANSACTIONS TABLE -->
+        <!-- ── TRANSACTIONS TABLE ─────────────── -->
         <div class="et-card">
             <div class="et-card__body">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
-                    <div class="et-card__title" style="margin-bottom:0;">Recent Transactions</div>
+                    <div class="et-card__title" style="margin-bottom:0;">
+                        Recent Transactions
+                        <span style="font-size:0.75rem; color:var(--text-3); font-weight:400; margin-left:6px;">
+                            <span class="et-kbd">N</span> to add <span class="et-kbd">/</span> to search
+                        </span>
+                    </div>
                     <a href="{{ url_for('expense_history') }}" class="et-viewall">View all →</a>
                 </div>
 
@@ -193,7 +263,7 @@
                             <tr>
                                 <th>Date</th>
                                 <th>Category</th>
-                                <th>Notes</th>
+                                <th>Notes & Tags</th>
                                 <th class="text-right">Amount</th>
                                 <th class="text-right">Actions</th>
                             </tr>
@@ -205,16 +275,26 @@
                                 <td>
                                     <span class="et-pill">{{ exp.category }}</span>
                                     {% if exp.is_recurring %}
-                                    <span class="et-recurring-badge" style="margin-left:4px;">
-                                        ↻ {{ exp.recurrence }}
-                                    </span>
+                                    <span class="et-recurring-badge">↻ {{ exp.recurrence }}</span>
                                     {% endif %}
                                 </td>
-                                <td class="et-notes-col">{{ exp.notes or '—' }}</td>
-                                <td class="text-right et-amount">₹{{ "%.0f"|format(exp.amount) }}</td>
+                                <td>
+                                    <div class="et-notes-col">{{ exp.notes or '' }}</div>
+                                    {% if exp.tags %}
+                                    <div style="margin-top:3px;">
+                                        {% for tag in exp.tags.split(',') %}
+                                        {% set t = tag.strip() %}
+                                        {% if t %}
+                                        <span class="et-tag">#{{ t }}</span>
+                                        {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </td>
+                                <td class="text-right et-amount">{{ user.currency }}{{ "%.0f"|format(exp.amount) }}</td>
                                 <td class="text-right" style="white-space:nowrap;">
                                     <a href="{{ url_for('edit', id=exp.id) }}" class="et-btn et-btn--warning-ghost"
-                                        style="margin-right:6px;">Edit</a>
+                                        style="margin-right:5px;">Edit</a>
                                     <a href="{{ url_for('delete', id=exp.id) }}" class="et-btn et-btn--danger-ghost"
                                         onclick="return confirm('Delete this expense?')">Delete</a>
                                 </td>
@@ -226,7 +306,7 @@
 
                 {% else %}
                 <div class="et-empty">
-                    <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <svg width="60" height="60" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <rect x="8" y="16" width="48" height="36" rx="6" stroke="currentColor" stroke-width="2.5"
                             fill="none" />
                         <path d="M8 26h48" stroke="currentColor" stroke-width="2.5" />
@@ -234,7 +314,7 @@
                         <rect x="28" y="34" width="16" height="4" rx="2" fill="currentColor" opacity="0.3" />
                     </svg>
                     <div class="et-empty__title">No expenses yet</div>
-                    <div>Add your first expense using the form above</div>
+                    <div>Add your first expense using the form above or press <span class="et-kbd">N</span></div>
                 </div>
                 {% endif %}
 
@@ -248,102 +328,140 @@
 
     <!-- ── SCRIPTS ────────────────────────────── -->
     <script>
-        // ── DONUT ──────────────────────────────────
         const spent = {{ total_spent | tojson }};
         const lim = {{ monthly_limit | tojson }};
-        const remaining = Math.max(lim - spent, 0);
-        const pct = (spent / lim) * 100;
+        const curr = {{ user.currency | tojson }};
 
+        // ── DROPDOWN ────────────────────────────────
+        const userWrap = document.querySelector('.et-nav__user-wrap');
+        const dropdown = document.querySelector('.et-nav__dropdown');
+        if (userWrap && dropdown) {
+            userWrap.querySelector('.et-nav__user-btn').addEventListener('click', e => {
+                e.stopPropagation();
+                dropdown.classList.toggle('open');
+            });
+            document.addEventListener('click', () => dropdown.classList.remove('open'));
+            dropdown.addEventListener('click', e => e.stopPropagation());
+        }
+
+        // ── DONUT ──────────────────────────────────
         function donutColor(p) {
             if (p < 50) return '#16a34a';
             if (p < 80) return '#d97706';
             return '#dc2626';
         }
-
+        const pct = lim > 0 ? (spent / lim) * 100 : 0;
         new Chart(document.getElementById('limitChart'), {
             type: 'doughnut',
-            data: {
-                datasets: [{
-                    data: [spent, remaining],
-                    backgroundColor: [donutColor(pct), 'rgba(150,150,150,0.12)'],
-                    borderWidth: 0
-                }]
-            },
-            options: {
-                cutout: '78%',
-                plugins: { legend: { display: false } },
-                animation: { animateRotate: true, duration: 900 }
-            }
+            data: { datasets: [{ data: [spent, Math.max(lim - spent, 0)], backgroundColor: [donutColor(pct), 'rgba(150,150,150,0.10)'], borderWidth: 0 }] },
+            options: { cutout: '78%', plugins: { legend: { display: false } }, animation: { animateRotate: true, duration: 900 } }
         });
+
+        // ── COUNTER ANIMATION ──────────────────────
+        function animateCounter(el, target, duration = 1200) {
+            let start = null;
+            const step = ts => {
+                if (!start) start = ts;
+                const p = Math.min((ts - start) / duration, 1);
+                el.textContent = Math.round((1 - Math.pow(1 - p, 3)) * target).toLocaleString();
+                if (p < 1) requestAnimationFrame(step);
+                else el.textContent = target.toLocaleString();
+            };
+            requestAnimationFrame(step);
+        }
+        animateCounter(document.getElementById('spentCounter'), {{ total_spent | int }});
 
         // ── INLINE LIMIT EDIT ──────────────────────
-        const display = document.getElementById('limitDisplay2');
-        const input = document.getElementById('limitInput');
-        const saveBtn = document.getElementById('limitSaveBtn');
+        const limitDisplayText = document.getElementById('limitDisplayText');
+        const limitInput = document.getElementById('limitInput');
+        const limitSaveBtn = document.getElementById('limitSaveBtn');
 
-        display.addEventListener('click', () => {
-            display.style.display = 'none';
-            input.style.display = 'inline-block';
-            saveBtn.style.display = 'inline-block';
-            input.focus();
+        limitDisplayText.addEventListener('click', () => {
+            limitDisplayText.style.display = 'none';
+            limitInput.style.display = 'inline-block';
+            limitSaveBtn.style.display = 'inline-block';
+            limitInput.focus();
         });
 
-        saveBtn.addEventListener('click', async () => {
-            const val = parseFloat(input.value);
-            if (!val || val <= 0) return showToast('Enter a valid limit', true);
+        limitSaveBtn.addEventListener('click', async () => {
+            const val = parseFloat(limitInput.value);
+            if (!val || val <= 0) return showToast('Enter a valid limit', 'error');
             const res = await fetch('/api/set-limit', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ limit: val })
             });
             const data = await res.json();
             if (data.success) {
-                display.textContent = '₹' + val;
-                display.style.display = 'inline';
-                input.style.display = 'none';
-                saveBtn.style.display = 'none';
+                limitDisplayText.textContent = curr + val;
+                limitDisplayText.style.display = 'inline';
+                limitInput.style.display = 'none';
+                limitSaveBtn.style.display = 'none';
                 showToast('Monthly limit updated ✓');
                 setTimeout(() => location.reload(), 800);
             }
         });
-
-        input.addEventListener('keydown', e => { if (e.key === 'Enter') saveBtn.click(); });
+        limitInput.addEventListener('keydown', e => { if (e.key === 'Enter') limitSaveBtn.click(); });
 
         // ── RECURRING TOGGLE ───────────────────────
         document.getElementById('recurringCheck').addEventListener('change', function () {
-            const wrap = document.getElementById('recurrenceWrap');
-            wrap.classList.toggle('visible', this.checked);
+            document.getElementById('recurrenceWrap').classList.toggle('visible', this.checked);
         });
 
         // ── SEARCH DEBOUNCE ────────────────────────
         let searchTimer;
         document.getElementById('searchInput').addEventListener('input', function () {
             clearTimeout(searchTimer);
-            searchTimer = setTimeout(() => {
-                document.getElementById('filterForm').submit();
-            }, 450);
+            searchTimer = setTimeout(() => document.getElementById('filterForm').submit(), 450);
+        });
+
+        // ── KEYBOARD SHORTCUTS ─────────────────────
+        document.addEventListener('keydown', e => {
+            const tag = document.activeElement.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+            if (e.key === 'n' || e.key === 'N') {
+                document.getElementById('amountInput').focus();
+                e.preventDefault();
+            }
+            if (e.key === '/') {
+                document.getElementById('searchInput').focus();
+                e.preventDefault();
+            }
+        });
+
+        // ── MAGNETIC BUTTONS ───────────────────────
+        document.querySelectorAll('.et-btn-magnetic').forEach(btn => {
+            btn.addEventListener('mousemove', e => {
+                const r = btn.getBoundingClientRect();
+                btn.style.transform = `translate(${(e.clientX - r.left - r.width / 2) * 0.18}px,${(e.clientY - r.top - r.height / 2) * 0.18}px)`;
+            });
+            btn.addEventListener('mouseleave', () => { btn.style.transform = ''; });
         });
 
         // ── TOAST ──────────────────────────────────
-        function showToast(msg, isError = false) {
+        function showToast(msg, type = 'success') {
             const wrap = document.getElementById('toastWrap');
             const toast = document.createElement('div');
-            toast.className = 'et-toast' + (isError ? ' et-toast--error' : '');
-            toast.innerHTML = `<span>${isError ? '⚠' : '✓'}</span> ${msg}`;
+            const cls = type === 'error' ? 'et-toast--error' : type === 'warning' ? 'et-toast--warning' : '';
+            toast.className = 'et-toast ' + cls;
+            toast.innerHTML = `<span>${type === 'error' ? '⚠' : '✓'}</span> ${msg}`;
             wrap.appendChild(toast);
             setTimeout(() => toast.remove(), 3200);
         }
 
-        // Show toast if expense was just added (detect via URL param)
-        {% if request.method == 'GET' and request.args.get('added') %}
+        // Show toast on add / budget alerts
+        {% if request.args.get('added') %}
         showToast('Expense added successfully ✓');
         {% endif %}
+
+        {% for alert in alerts %}
+        showToast('⚠ {{ alert.category }} at {{ alert.pct }}% of budget!', 'warning');
+        {% endfor %}
 
         // ── THEME ──────────────────────────────────
         const toggle = document.getElementById('themeToggle');
         const icon = document.getElementById('themeIcon');
         const root = document.documentElement;
-        const saved = localStorage.getItem('theme') || 'light';
+        const saved = localStorage.getItem('theme') || '{{ user.theme }}';
         root.setAttribute('data-theme', saved);
         toggle.checked = saved === 'dark';
         icon.textContent = saved === 'dark' ? '☽' : '☀';
@@ -352,6 +470,7 @@
             root.setAttribute('data-theme', t);
             localStorage.setItem('theme', t);
             icon.textContent = t === 'dark' ? '☽' : '☀';
+            fetch('/api/save-theme', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ theme: t }) });
         });
     </script>
 

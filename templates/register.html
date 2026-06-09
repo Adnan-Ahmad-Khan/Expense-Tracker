@@ -11,105 +11,6 @@
         href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <style>
-        .et-auth-page {
-            position: relative;
-            overflow: hidden;
-        }
-
-        .et-auth-page::before {
-            content: '';
-            position: fixed;
-            width: 600px;
-            height: 600px;
-            background: radial-gradient(circle, rgba(45, 110, 247, 0.08) 0%, transparent 70%);
-            top: -150px;
-            right: -150px;
-            border-radius: 50%;
-            pointer-events: none;
-        }
-
-        .et-auth-page::after {
-            content: '';
-            position: fixed;
-            width: 400px;
-            height: 400px;
-            background: radial-gradient(circle, rgba(22, 163, 74, 0.06) 0%, transparent 70%);
-            bottom: -100px;
-            left: -100px;
-            border-radius: 50%;
-            pointer-events: none;
-        }
-
-        .et-input-wrap {
-            position: relative;
-        }
-
-        .et-input-icon {
-            position: absolute;
-            left: 13px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--text-3);
-            font-size: 0.9rem;
-            pointer-events: none;
-        }
-
-        .et-input-wrap .et-input {
-            padding-left: 36px;
-        }
-
-        /* password strength bar */
-        .et-pwd-strength {
-            margin-top: 6px;
-            height: 4px;
-            border-radius: 99px;
-            background: var(--surface-2);
-            overflow: hidden;
-        }
-
-        .et-pwd-strength__fill {
-            height: 100%;
-            border-radius: 99px;
-            transition: width 0.3s, background 0.3s;
-            width: 0%;
-        }
-
-        .et-pwd-hint {
-            font-size: 0.72rem;
-            color: var(--text-3);
-            margin-top: 4px;
-        }
-
-        .et-theme-corner {
-            position: fixed;
-            top: 16px;
-            right: 20px;
-        }
-
-        /* feature bullets */
-        .et-feature-list {
-            list-style: none;
-            margin: 0 0 24px 0;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-            gap: 7px;
-        }
-
-        .et-feature-list li {
-            font-size: 0.8rem;
-            color: var(--text-2);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .et-feature-list li span.tick {
-            color: var(--green);
-            font-size: 0.75rem;
-        }
-    </style>
 </head>
 
 <body>
@@ -122,32 +23,30 @@
     </div>
 
     <div class="et-auth-page">
+        <div class="et-auth-blob et-auth-blob--1"></div>
+        <div class="et-auth-blob et-auth-blob--2"></div>
+
         <div class="et-auth-card">
 
-            <!-- Brand -->
             <div class="et-auth-card__brand">
                 <span
-                    style="width:9px;height:9px;background:var(--accent);border-radius:50%;display:inline-block;"></span>
+                    style="width:9px;height:9px;background:var(--accent);border-radius:50%;display:inline-block;animation:pulse 2.5s infinite;"></span>
                 Expense Tracker
             </div>
 
-            <!-- Heading -->
             <div class="et-auth-card__title">Create your account</div>
-            <div class="et-auth-card__sub">Start tracking your expenses in seconds</div>
+            <div class="et-auth-card__sub">Start tracking in seconds — free forever</div>
 
-            <!-- Feature bullets -->
             <ul class="et-feature-list">
-                <li><span class="tick">✔</span> Personal dashboard with spending insights</li>
-                <li><span class="tick">✔</span> Category budgets & monthly limits</li>
-                <li><span class="tick">✔</span> Export to CSV anytime</li>
+                <li><span class="tick">✔</span> Smart dashboard with spending insights</li>
+                <li><span class="tick">✔</span> Category budgets, recurring expenses & tags</li>
+                <li><span class="tick">✔</span> Multi-currency + CSV export anytime</li>
             </ul>
 
-            <!-- Error -->
             {% if error %}
             <div class="et-error-box">⚠ {{ error }}</div>
             {% endif %}
 
-            <!-- Form -->
             <form method="POST" action="{{ url_for('register') }}">
                 <div class="et-stack">
 
@@ -182,43 +81,48 @@
                         <div class="et-pwd-hint" id="pwdHint">Enter a password</div>
                     </div>
 
-                    <button type="submit" class="et-btn et-btn--primary"
-                        style="width:100%; margin-top:6px; padding:11px;">
+                    <button type="submit" class="et-btn et-btn--primary et-btn--full et-btn-magnetic"
+                        style="margin-top:4px; padding:11px;">
                         Create account →
                     </button>
 
                 </div>
             </form>
 
-            <div style="display:flex;align-items:center;gap:12px;color:var(--text-3);font-size:0.75rem;margin:20px 0;">
+            <div style="display:flex;align-items:center;gap:12px;color:var(--text-3);font-size:0.73rem;margin:20px 0;">
                 <div style="flex:1;height:1px;background:var(--border);"></div>
                 or
                 <div style="flex:1;height:1px;background:var(--border);"></div>
             </div>
 
             <div class="et-auth-card__footer">
-                Already have an account?
-                <a href="{{ url_for('login') }}">Sign in</a>
+                Already have an account? <a href="{{ url_for('login') }}">Sign in</a>
+            </div>
+
+            <div style="text-align:center; margin-top:10px;">
+                <a href="{{ url_for('landing') }}"
+                    style="font-size:0.75rem; color:var(--text-3); text-decoration:none;">
+                    ← Back to home
+                </a>
             </div>
 
         </div>
     </div>
 
     <script>
-        // Password strength meter
+        // Password strength
         const pwdInput = document.getElementById('passwordInput');
         const pwdBar = document.getElementById('pwdBar');
         const pwdHint = document.getElementById('pwdHint');
 
         pwdInput.addEventListener('input', () => {
-            const val = pwdInput.value;
+            const v = pwdInput.value;
             let score = 0;
-            if (val.length >= 6) score++;
-            if (val.length >= 10) score++;
-            if (/[A-Z]/.test(val)) score++;
-            if (/[0-9]/.test(val)) score++;
-            if (/[^A-Za-z0-9]/.test(val)) score++;
-
+            if (v.length >= 6) score++;
+            if (v.length >= 10) score++;
+            if (/[A-Z]/.test(v)) score++;
+            if (/[0-9]/.test(v)) score++;
+            if (/[^A-Za-z0-9]/.test(v)) score++;
             const levels = [
                 { pct: '0%', color: 'transparent', label: 'Enter a password' },
                 { pct: '25%', color: '#dc2626', label: 'Weak' },
@@ -229,11 +133,19 @@
             const lvl = levels[Math.min(score, 4)];
             pwdBar.style.width = lvl.pct;
             pwdBar.style.background = lvl.color;
-            pwdHint.textContent = val.length === 0 ? 'Enter a password' : lvl.label;
+            pwdHint.textContent = v.length === 0 ? 'Enter a password' : lvl.label;
             pwdHint.style.color = lvl.color === 'transparent' ? 'var(--text-3)' : lvl.color;
         });
 
-        // Theme
+        // Magnetic button
+        document.querySelectorAll('.et-btn-magnetic').forEach(btn => {
+            btn.addEventListener('mousemove', e => {
+                const r = btn.getBoundingClientRect();
+                btn.style.transform = `translate(${(e.clientX - r.left - r.width / 2) * 0.15}px,${(e.clientY - r.top - r.height / 2) * 0.15}px)`;
+            });
+            btn.addEventListener('mouseleave', () => { btn.style.transform = ''; });
+        });
+
         const toggle = document.getElementById('themeToggle');
         const icon = document.getElementById('themeIcon');
         const root = document.documentElement;

@@ -21,11 +21,30 @@
             <span class="et-nav__brand-dot"></span>Expense Tracker
         </a>
         <div class="et-nav__links">
-            <span class="et-nav__user">Hi, {{ user.name.split()[0] }} 👋</span>
+            <div class="et-nav__user-wrap">
+                <button class="et-nav__user-btn">
+                    <div class="et-nav__avatar">{{ user.name[0].upper() }}</div>
+                    {{ user.name.split()[0] }}
+                    <span style="font-size:0.65rem; opacity:0.6;">▾</span>
+                </button>
+                <div class="et-nav__dropdown">
+                    <div style="padding:10px 14px 8px;">
+                        <div style="font-size:0.82rem; font-weight:700; color:var(--text);">{{ user.name }}</div>
+                        <div style="font-size:0.75rem; color:var(--text-3);">{{ user.email }}</div>
+                    </div>
+                    <div class="et-nav__dropdown-divider"></div>
+                    <a href="{{ url_for('settings') }}" class="et-nav__dropdown-item">⚙️ Settings</a>
+                    <a href="{{ url_for('export_csv') }}" class="et-nav__dropdown-item">⬇️ Export CSV</a>
+                    <div class="et-nav__dropdown-divider"></div>
+                    <a href="{{ url_for('switch_account') }}" class="et-nav__dropdown-item">🔄 Switch Account</a>
+                    <a href="{{ url_for('logout') }}" class="et-nav__dropdown-item et-nav__dropdown-item--danger">🚪
+                        Logout</a>
+                </div>
+            </div>
             <a href="{{ url_for('home') }}" class="et-nav__link">Dashboard</a>
             <a href="{{ url_for('analytics') }}" class="et-nav__link">Analytics</a>
             <a href="{{ url_for('expense_history') }}" class="et-nav__link et-nav__link--active">History</a>
-            <a href="{{ url_for('logout') }}" class="et-nav__link" style="color:var(--red-soft);">Logout</a>
+            <a href="{{ url_for('settings') }}" class="et-nav__link">Settings</a>
             <label class="et-toggle" title="Toggle theme">
                 <input type="checkbox" id="themeToggle">
                 <span id="themeIcon">☀</span>
@@ -35,57 +54,67 @@
 
     <div class="et-page">
 
-        <!-- PAGE HEADER -->
         <div class="et-page-header">
             <h1>Expense History</h1>
-            <p>All your recorded transactions</p>
+            <p>All your recorded transactions — search, filter and export</p>
         </div>
 
-        <!-- SEARCH + EXPORT BAR -->
-        <form method="GET" id="searchForm">
-            <div class="et-formbar" style="margin-bottom:20px;">
+        <!-- ── SEARCH + EXPORT BAR ───────────────── -->
+        <form method="GET" action="{{ url_for('expense_history') }}" id="searchForm">
+            <div class="et-formbar" style="margin-bottom:12px;">
 
                 <span class="et-formbar__label">Search</span>
 
-                <div class="et-search" style="flex:1; min-width:220px;">
+                <div class="et-search" style="flex:1; min-width:200px;">
                     <span class="et-search__icon">🔍</span>
                     <input type="text" name="q" id="searchInput" value="{{ search_q }}"
-                        placeholder="Search by category or notes…">
+                        placeholder="Category, notes or tags…">
                 </div>
 
-                {% if search_q %}
+                {% if search_q or tag_q %}
                 <a href="{{ url_for('expense_history') }}" class="et-btn et-btn--ghost et-btn--sm">Clear</a>
                 {% endif %}
 
-                <!-- spacer -->
                 <div style="flex:1;"></div>
 
                 <!-- Summary chips -->
                 {% if expenses %}
                 <div style="display:flex; align-items:center; gap:10px; flex-shrink:0;">
-                    <div style="font-size:0.78rem; color:var(--text-2);">
-                        <span style="font-weight:700; color:var(--text);">{{ expenses | length }}</span> transactions
-                    </div>
-                    <div style="width:1px; height:16px; background:var(--border);"></div>
-                    <div style="font-size:0.78rem; color:var(--text-2);">
-                        Total: <span style="font-weight:700; color:var(--red);">
-                            ₹{{ "%.0f"|format(expenses | sum(attribute='amount')) }}
-                        </span>
-                    </div>
+                    <span style="font-size:0.77rem; color:var(--text-2);">
+                        <strong style="color:var(--text);">{{ total_count }}</strong> total
+                    </span>
+                    <div style="width:1px; height:14px; background:var(--border);"></div>
+                    <span style="font-size:0.77rem; color:var(--text-2);">
+                        Page <strong style="color:var(--text);">{{ page }}</strong> of <strong
+                            style="color:var(--text);">{{ total_pages }}</strong>
+                    </span>
                 </div>
                 {% endif %}
 
                 <div class="et-divider"></div>
-
-                <!-- CSV Export -->
                 <a href="{{ url_for('export_csv') }}" class="et-btn et-btn--green et-btn--sm" style="flex-shrink:0;">
                     ⬇ Export CSV
                 </a>
 
             </div>
+
+            <!-- Tag filter chips -->
+            {% if all_tags %}
+            <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:16px; align-items:center;">
+                <span
+                    style="font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-3);">Tags:</span>
+                {% for tag in all_tags %}
+                <a href="{{ url_for('expense_history', tag=tag, q=search_q) }}"
+                    class="et-tag-filter {% if tag_q == tag %}et-tag-filter--active{% endif %}">
+                    # {{ tag }}
+                </a>
+                {% endfor %}
+            </div>
+            {% endif %}
+
         </form>
 
-        <!-- TABLE CARD -->
+        <!-- ── TABLE CARD ────────────────────────── -->
         <div class="et-card">
             <div class="et-card__body">
 
@@ -97,6 +126,7 @@
                                 <th>Date</th>
                                 <th>Category</th>
                                 <th>Notes</th>
+                                <th>Tags</th>
                                 <th>Recurring</th>
                                 <th class="text-right">Amount</th>
                                 <th class="text-right">Actions</th>
@@ -104,28 +134,37 @@
                         </thead>
                         <tbody>
                             {% for exp in expenses %}
-                            <tr>
-                                <td class="text-muted-col">{{ exp.date.strftime('%d %b %Y') }}</td>
-
+                            <tr style="animation: pageFadeIn 0.3s ease {{ loop.index0 * 0.03 }}s both;">
+                                <td class="text-muted-col" style="white-space:nowrap;">
+                                    {{ exp.date.strftime('%d %b %Y') }}
+                                </td>
                                 <td><span class="et-pill">{{ exp.category }}</span></td>
-
                                 <td class="et-notes-col" title="{{ exp.notes or '' }}">
                                     {{ exp.notes or '—' }}
                                 </td>
-
+                                <td>
+                                    {% if exp.tags %}
+                                    {% for tag in exp.tags.split(',') %}
+                                    {% set t = tag.strip() %}
+                                    {% if t %}<span class="et-tag">#{{ t }}</span>{% endif %}
+                                    {% endfor %}
+                                    {% else %}
+                                    <span style="color:var(--text-3); font-size:0.77rem;">—</span>
+                                    {% endif %}
+                                </td>
                                 <td>
                                     {% if exp.is_recurring %}
                                     <span class="et-recurring-badge">↻ {{ exp.recurrence }}</span>
                                     {% else %}
-                                    <span style="color:var(--text-3); font-size:0.78rem;">—</span>
+                                    <span style="color:var(--text-3); font-size:0.77rem;">—</span>
                                     {% endif %}
                                 </td>
-
-                                <td class="text-right et-amount">₹{{ "%.0f"|format(exp.amount) }}</td>
-
+                                <td class="text-right et-amount" style="white-space:nowrap;">
+                                    {{ user.currency }}{{ "%.0f"|format(exp.amount) }}
+                                </td>
                                 <td class="text-right" style="white-space:nowrap;">
                                     <a href="{{ url_for('edit', id=exp.id) }}" class="et-btn et-btn--warning-ghost"
-                                        style="margin-right:6px;">Edit</a>
+                                        style="margin-right:5px;">Edit</a>
                                     <a href="{{ url_for('delete', id=exp.id) }}" class="et-btn et-btn--danger-ghost"
                                         onclick="return confirm('Delete this expense?')">Delete</a>
                                 </td>
@@ -135,41 +174,75 @@
                     </table>
                 </div>
 
-                <!-- Table footer summary -->
-                <div style="
-        display:flex; justify-content:flex-end; align-items:center;
-        gap:24px; padding:14px 16px 0; border-top:1px solid var(--border);
-        margin-top:4px;">
-                    <span style="font-size:0.8rem; color:var(--text-3);">
-                        {{ expenses | length }} record{% if expenses | length != 1 %}s{% endif %}
+                <!-- Table footer -->
+                <div style="display:flex; justify-content:space-between; align-items:center;
+                  padding:14px 2px 0; border-top:1px solid var(--border); margin-top:4px;
+                  flex-wrap:wrap; gap:10px;">
+                    <span style="font-size:0.78rem; color:var(--text-3);">
+                        Showing {{ expenses | length }} of {{ total_count }} record{% if total_count != 1 %}s{% endif %}
                     </span>
                     <span style="font-size:0.88rem; font-weight:700; color:var(--red);">
-                        Total: ₹{{ "%.0f"|format(expenses | sum(attribute='amount')) }}
+                        Page total: {{ user.currency }}{{ "%.0f"|format(expenses | sum(attribute='amount')) }}
                     </span>
                 </div>
 
-                {% else %}
+                <!-- ── PAGINATION ────────────────────── -->
+                {% if total_pages > 1 %}
+                <div class="et-pagination">
+                    <!-- Prev -->
+                    {% if page > 1 %}
+                    <a href="{{ url_for('expense_history', page=page-1, q=search_q, tag=tag_q) }}" class="et-page-btn">←
+                        Prev</a>
+                    {% else %}
+                    <span class="et-page-btn et-page-btn--disabled">← Prev</span>
+                    {% endif %}
 
+                    <!-- Page numbers -->
+                    {% for p in range(1, total_pages+1) %}
+                    {% if p == page %}
+                    <span class="et-page-btn et-page-btn--active">{{ p }}</span>
+                    {% elif p == 1 or p == total_pages or (p >= page-2 and p <= page+2) %} <a
+                        href="{{ url_for('expense_history', page=p, q=search_q, tag=tag_q) }}" class="et-page-btn">{{ p
+                        }}</a>
+                        {% elif p == page-3 or p == page+3 %}
+                        <span class="et-page-btn et-page-btn--disabled" style="border:none; background:none;">…</span>
+                        {% endif %}
+                        {% endfor %}
+
+                        <!-- Next -->
+                        {% if page < total_pages %} <a
+                            href="{{ url_for('expense_history', page=page+1, q=search_q, tag=tag_q) }}"
+                            class="et-page-btn">Next →</a>
+                            {% else %}
+                            <span class="et-page-btn et-page-btn--disabled">Next →</span>
+                            {% endif %}
+                </div>
+                {% endif %}
+
+                {% else %}
                 <!-- Empty state -->
                 <div class="et-empty">
-                    <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <svg width="60" height="60" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <rect x="8" y="16" width="48" height="36" rx="6" stroke="currentColor" stroke-width="2.5"
                             fill="none" />
                         <path d="M8 26h48" stroke="currentColor" stroke-width="2.5" />
                         <circle cx="20" cy="36" r="3" fill="currentColor" opacity="0.4" />
                         <rect x="28" y="34" width="16" height="4" rx="2" fill="currentColor" opacity="0.3" />
                     </svg>
-                    {% if search_q %}
-                    <div class="et-empty__title">No results for "{{ search_q }}"</div>
-                    <div>Try a different keyword or <a href="{{ url_for('expense_history') }}"
-                            style="color:var(--accent);">clear search</a></div>
+                    {% if search_q or tag_q %}
+                    <div class="et-empty__title">No results found</div>
+                    <div>
+                        Try a different keyword or
+                        <a href="{{ url_for('expense_history') }}" style="color:var(--accent);">clear filters</a>
+                    </div>
                     {% else %}
                     <div class="et-empty__title">No expenses recorded yet</div>
-                    <div>Head to the <a href="{{ url_for('home') }}" style="color:var(--accent);">Dashboard</a> to add
-                        your first one</div>
+                    <div>
+                        Head to the <a href="{{ url_for('home') }}" style="color:var(--accent);">Dashboard</a>
+                        to add your first one
+                    </div>
                     {% endif %}
                 </div>
-
                 {% endif %}
 
             </div>
@@ -177,22 +250,19 @@
 
     </div><!-- /et-page -->
 
-    <!-- ── SCRIPTS ────────────────────────────── -->
     <script>
-        // Live search — debounced
-        let searchTimer;
+        // Live search debounce
+        let timer;
         document.getElementById('searchInput').addEventListener('input', function () {
-            clearTimeout(searchTimer);
-            searchTimer = setTimeout(() => {
-                document.getElementById('searchForm').submit();
-            }, 450);
+            clearTimeout(timer);
+            timer = setTimeout(() => document.getElementById('searchForm').submit(), 450);
         });
 
         // Theme
         const toggle = document.getElementById('themeToggle');
         const icon = document.getElementById('themeIcon');
         const root = document.documentElement;
-        const saved = localStorage.getItem('theme') || 'light';
+        const saved = localStorage.getItem('theme') || '{{ user.theme }}';
         root.setAttribute('data-theme', saved);
         toggle.checked = saved === 'dark';
         icon.textContent = saved === 'dark' ? '☽' : '☀';
@@ -201,6 +271,7 @@
             root.setAttribute('data-theme', t);
             localStorage.setItem('theme', t);
             icon.textContent = t === 'dark' ? '☽' : '☀';
+            fetch('/api/save-theme', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ theme: t }) });
         });
     </script>
 

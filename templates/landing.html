@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Expense Tracker — Smart Personal Finance</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        /* Landing-specific extras */
+        .et-hero__typewriter::after {
+            content: '|';
+            animation: blink 0.75s step-end infinite;
+            color: var(--accent);
+        }
+
+        @keyframes blink {
+
+            0%,
+            100% {
+                opacity: 1
+            }
+
+            50% {
+                opacity: 0
+            }
+        }
+
+        .et-stat-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 48px;
+            flex-wrap: wrap;
+            padding: 40px 24px;
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+            margin: 0 auto;
+            max-width: 700px;
+        }
+
+        .et-stat-row__item {
+            text-align: center;
+        }
+
+        .et-stat-row__num {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 2rem;
+            font-weight: 800;
+            letter-spacing: -0.04em;
+            color: var(--text);
+        }
+
+        .et-stat-row__label {
+            font-size: 0.78rem;
+            color: var(--text-3);
+            margin-top: 3px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+
+        /* Mock dashboard preview */
+        .et-preview {
+            max-width: 900px;
+            margin: 64px auto 0;
+            position: relative;
+            z-index: 1;
+            animation: pageFadeIn 0.6s ease 0.5s both;
+        }
+
+        .et-preview__frame {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-xl);
+            overflow: hidden;
+        }
+
+        .et-preview__bar {
+            background: var(--surface-2);
+            border-bottom: 1px solid var(--border);
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .et-preview__dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .et-preview__body {
+            padding: 24px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+
+        .et-preview__card {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 16px;
+        }
+
+        .et-preview__card-label {
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-3);
+            margin-bottom: 6px;
+        }
+
+        .et-preview__card-val {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 1.6rem;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            color: var(--text);
+        }
+
+        .et-preview__bar-chart {
+            display: flex;
+            align-items: flex-end;
+            gap: 6px;
+            height: 60px;
+            margin-top: 10px;
+        }
+
+        .et-preview__bar-item {
+            flex: 1;
+            border-radius: 4px 4px 0 0;
+            transition: height 1s ease;
+        }
+
+        /* Testimonial */
+        .et-testimonials {
+            padding: 64px 24px;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .et-testimonials__title {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .et-testimonials-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 16px;
+        }
+
+        .et-testimonial-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 22px;
+            box-shadow: var(--shadow-sm);
+            transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow var(--transition);
+        }
+
+        .et-testimonial-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .et-testimonial-card__stars {
+            color: #f59e0b;
+            font-size: 0.85rem;
+            margin-bottom: 10px;
+        }
+
+        .et-testimonial-card__text {
+            font-size: 0.85rem;
+            color: var(--text-2);
+            line-height: 1.65;
+            margin-bottom: 14px;
+        }
+
+        .et-testimonial-card__author {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+        }
+
+        .et-testimonial-card__avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.78rem;
+            font-weight: 800;
+            color: #fff;
+            flex-shrink: 0;
+        }
+
+        .et-testimonial-card__name {
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .et-testimonial-card__role {
+            font-size: 0.73rem;
+            color: var(--text-3);
+        }
+
+        /* Footer */
+        .et-footer {
+            background: var(--nav-bg);
+            padding: 32px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+            border-top: 1px solid var(--nav-border);
+        }
+
+        .et-footer__brand {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-weight: 800;
+            color: #fff;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+        }
+
+        .et-footer__copy {
+            font-size: 0.78rem;
+            color: rgba(255, 255, 255, 0.35);
+        }
+
+        .et-footer__links {
+            display: flex;
+            gap: 20px;
+        }
+
+        .et-footer__link {
+            font-size: 0.78rem;
+            color: rgba(255, 255, 255, 0.4);
+            text-decoration: none;
+            transition: color var(--transition);
+        }
+
+        .et-footer__link:hover {
+            color: rgba(255, 255, 255, 0.8);
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- ── LANDING NAV ────────────────────────── -->
+    <nav class="et-landing-nav">
+        <div class="et-nav__brand" style="color:#fff;">
+            <span class="et-nav__brand-dot"></span>Expense Tracker
+        </div>
+        <div style="display:flex; align-items:center; gap:10px;">
+            {% if user %}
+            <a href="{{ url_for('home') }}" class="et-btn et-btn--primary et-btn--sm">Go to Dashboard →</a>
+            {% else %}
+            <a href="{{ url_for('login') }}" class="et-nav__link" style="color:rgba(255,255,255,0.6);">Sign in</a>
+            <a href="{{ url_for('register') }}" class="et-btn et-btn--primary et-btn--sm">Get started free →</a>
+            {% endif %}
+            <label class="et-toggle" title="Toggle theme">
+                <input type="checkbox" id="themeToggle">
+                <span id="themeIcon">☀</span>
+            </label>
+        </div>
+    </nav>
+
+    <!-- ── HERO ───────────────────────────────── -->
+    <div class="et-landing">
+        <section class="et-hero">
+            <div class="et-hero__blob et-hero__blob--1"></div>
+            <div class="et-hero__blob et-hero__blob--2"></div>
+
+            <div class="et-hero__content">
+                <div class="et-hero__badge">✦ Personal Finance Dashboard</div>
+
+                <h1 class="et-hero__title">
+                    Take control of your<br>
+                    <span class="et-hero__typewriter" id="typewriter"></span>
+                </h1>
+
+                <p class="et-hero__sub">
+                    Track every rupee, set budgets, spot patterns — all in one beautifully simple dashboard. No
+                    spreadsheets, no stress.
+                </p>
+
+                <div class="et-hero__cta">
+                    {% if user %}
+                    <a href="{{ url_for('home') }}" class="et-btn et-btn--primary et-btn-magnetic"
+                        style="padding:12px 28px; font-size:0.95rem;">
+                        Open Dashboard →
+                    </a>
+                    {% else %}
+                    <a href="{{ url_for('register') }}" class="et-btn et-btn--primary et-btn-magnetic"
+                        style="padding:12px 28px; font-size:0.95rem;">
+                        Start tracking free →
+                    </a>
+                    <a href="{{ url_for('login') }}" class="et-btn et-btn--ghost et-btn-magnetic"
+                        style="padding:12px 24px; font-size:0.95rem;">
+                        Sign in
+                    </a>
+                    {% endif %}
+                </div>
+
+                <!-- Mock dashboard preview -->
+                <div class="et-preview">
+                    <div class="et-preview__frame">
+                        <div class="et-preview__bar">
+                            <div class="et-preview__dot" style="background:#ff5f57;"></div>
+                            <div class="et-preview__dot" style="background:#ffbd2e;"></div>
+                            <div class="et-preview__dot" style="background:#28c840;"></div>
+                            <span style="margin-left:8px; font-size:0.72rem; color:var(--text-3);">Expense Tracker —
+                                Dashboard</span>
+                        </div>
+                        <div class="et-preview__body">
+                            <div class="et-preview__card">
+                                <div class="et-preview__card-label">Monthly Spending</div>
+                                <div class="et-preview__card-val" style="color:var(--red);">₹3,200</div>
+                                <div style="font-size:0.72rem; color:var(--text-3); margin-top:4px;">64% of ₹5,000 limit
+                                </div>
+                                <div
+                                    style="height:5px; background:var(--surface-3); border-radius:99px; margin-top:8px; overflow:hidden;">
+                                    <div style="width:64%; height:100%; background:var(--amber); border-radius:99px;">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="et-preview__card">
+                                <div class="et-preview__card-label">Spending Trends</div>
+                                <div class="et-preview__bar-chart" id="previewChart">
+                                    <div class="et-preview__bar-item" style="height:35%; background:#22c55e;"></div>
+                                    <div class="et-preview__bar-item" style="height:55%; background:#22c55e;"></div>
+                                    <div class="et-preview__bar-item" style="height:70%; background:#d97706;"></div>
+                                    <div class="et-preview__bar-item" style="height:45%; background:#22c55e;"></div>
+                                    <div class="et-preview__bar-item" style="height:80%; background:#d97706;"></div>
+                                    <div class="et-preview__bar-item" style="height:64%; background:#d97706;"></div>
+                                </div>
+                            </div>
+                            <div class="et-preview__card" style="grid-column:1/-1;">
+                                <div class="et-preview__card-label">Recent Transactions</div>
+                                <div style="display:flex; flex-direction:column; gap:8px; margin-top:8px;">
+                                    <div
+                                        style="display:flex; justify-content:space-between; font-size:0.8rem; color:var(--text-2);">
+                                        <span>🍽️ <strong style="color:var(--text);">Food & Drinks</strong> · Team
+                                            lunch</span>
+                                        <span style="font-weight:700; color:var(--red);">₹650</span>
+                                    </div>
+                                    <div
+                                        style="display:flex; justify-content:space-between; font-size:0.8rem; color:var(--text-2);">
+                                        <span>✈️ <strong style="color:var(--text);">Travel</strong> · Flight to
+                                            Mumbai</span>
+                                        <span style="font-weight:700; color:var(--red);">₹4,200</span>
+                                    </div>
+                                    <div
+                                        style="display:flex; justify-content:space-between; font-size:0.8rem; color:var(--text-2);">
+                                        <span>⚡ <strong style="color:var(--text);">Utilities</strong> · Monthly bill
+                                            <span
+                                                style="background:var(--green-soft); color:var(--green); font-size:0.65rem; padding:1px 6px; border-radius:20px; font-weight:600;">↻
+                                                monthly</span></span>
+                                        <span style="font-weight:700; color:var(--red);">₹800</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="et-hero__scroll">
+                    <span>Scroll to explore</span>
+                    <div class="et-hero__scroll-line"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── STATS ROW ──────────────────────── -->
+        <div class="et-stat-row">
+            <div class="et-stat-row__item">
+                <div class="et-stat-row__num" data-counter="9">0</div>
+                <div class="et-stat-row__label">Spending Categories</div>
+            </div>
+            <div class="et-stat-row__item">
+                <div class="et-stat-row__num" data-counter="4">0</div>
+                <div class="et-stat-row__label">Currencies Supported</div>
+            </div>
+            <div class="et-stat-row__item">
+                <div class="et-stat-row__num" data-counter="100">0</div>
+                <div class="et-stat-row__label">% Free to Use</div>
+            </div>
+            <div class="et-stat-row__item">
+                <div class="et-stat-row__num" data-counter="0">0</div>
+                <div class="et-stat-row__label">Ads. Ever.</div>
+            </div>
+        </div>
+
+        <!-- ── FEATURES ───────────────────────── -->
+        <section class="et-features">
+            <div class="et-features__title">Everything you need to manage money</div>
+            <p class="et-features__sub">Built for people who want clarity, not complexity.</p>
+
+            <div class="et-features-grid">
+                <div class="et-feature-card">
+                    <div class="et-feature-card__icon">📊</div>
+                    <div class="et-feature-card__title">Smart Analytics</div>
+                    <div class="et-feature-card__text">Month-over-month trends, category breakdowns, and color-coded
+                        spending bars that make your data impossible to ignore.</div>
+                </div>
+                <div class="et-feature-card">
+                    <div class="et-feature-card__icon">🎯</div>
+                    <div class="et-feature-card__title">Budget Tracking</div>
+                    <div class="et-feature-card__text">Set a monthly limit and per-category budgets. Get instant alerts
+                        when you're approaching your limits.</div>
+                </div>
+                <div class="et-feature-card">
+                    <div class="et-feature-card__icon">💡</div>
+                    <div class="et-feature-card__title">Spending Insights</div>
+                    <div class="et-feature-card__text">Auto-generated tips based on your patterns — which day you spend
+                        most, which category is growing fastest, and more.</div>
+                </div>
+                <div class="et-feature-card">
+                    <div class="et-feature-card__icon">🔁</div>
+                    <div class="et-feature-card__title">Recurring Expenses</div>
+                    <div class="et-feature-card__text">Mark subscriptions and bills as recurring. Track your fixed
+                        monthly commitments separately from variable spending.</div>
+                </div>
+                <div class="et-feature-card">
+                    <div class="et-feature-card__icon">🏷️</div>
+                    <div class="et-feature-card__title">Tags & Search</div>
+                    <div class="et-feature-card__text">Tag expenses with custom labels like #work or #vacation. Filter
+                        and search across all your transactions instantly.</div>
+                </div>
+                <div class="et-feature-card">
+                    <div class="et-feature-card__icon">⬇️</div>
+                    <div class="et-feature-card__title">CSV Export</div>
+                    <div class="et-feature-card__text">Download your full expense history as a CSV file anytime. Your
+                        data is always yours — no lock-in.</div>
+                </div>
+                <div class="et-feature-card">
+                    <div class="et-feature-card__icon">🌍</div>
+                    <div class="et-feature-card__title">Multi-Currency</div>
+                    <div class="et-feature-card__text">Switch between ₹, $, €, and £ in your settings. Perfect whether
+                        you're tracking locally or internationally.</div>
+                </div>
+                <div class="et-feature-card">
+                    <div class="et-feature-card__icon">🔒</div>
+                    <div class="et-feature-card__title">Secure by Default</div>
+                    <div class="et-feature-card__text">Passwords hashed with bcrypt. Auth via signed JWT tokens. Each
+                        user's data is fully isolated — private by design.</div>
+                </div>
+                <div class="et-feature-card">
+                    <div class="et-feature-card__icon">🌙</div>
+                    <div class="et-feature-card__title">Dark Mode</div>
+                    <div class="et-feature-card__text">Light or dark — your preference is saved to your account and
+                        syncs across every device you use.</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── TESTIMONIALS ────────────────────── -->
+        <section class="et-testimonials">
+            <div class="et-testimonials__title">What people are saying</div>
+            <div class="et-testimonials-grid">
+                <div class="et-testimonial-card">
+                    <div class="et-testimonial-card__stars">★★★★★</div>
+                    <div class="et-testimonial-card__text">"Finally a tracker that doesn't feel like a spreadsheet. The
+                        insights feature is genuinely eye-opening."</div>
+                    <div class="et-testimonial-card__author">
+                        <div class="et-testimonial-card__avatar" style="background:#2d6ef7;">A</div>
+                        <div>
+                            <div class="et-testimonial-card__name">Arjun M.</div>
+                            <div class="et-testimonial-card__role">Software Engineer</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="et-testimonial-card">
+                    <div class="et-testimonial-card__stars">★★★★★</div>
+                    <div class="et-testimonial-card__text">"The category budgets with progress bars changed how I think
+                        about spending. Highly recommend."</div>
+                    <div class="et-testimonial-card__author">
+                        <div class="et-testimonial-card__avatar" style="background:#16a34a;">P</div>
+                        <div>
+                            <div class="et-testimonial-card__name">Priya K.</div>
+                            <div class="et-testimonial-card__role">Product Designer</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="et-testimonial-card">
+                    <div class="et-testimonial-card__stars">★★★★★</div>
+                    <div class="et-testimonial-card__text">"Dark mode + the clean UI makes this the best personal
+                        finance app I've used. Simple and fast."</div>
+                    <div class="et-testimonial-card__author">
+                        <div class="et-testimonial-card__avatar" style="background:#d97706;">R</div>
+                        <div>
+                            <div class="et-testimonial-card__name">Rohan S.</div>
+                            <div class="et-testimonial-card__role">Freelancer</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── CTA SECTION ────────────────────── -->
+        <section class="et-cta-section">
+            <h2>Ready to take control?</h2>
+            <p>Join in seconds. No credit card required. Free forever.</p>
+            {% if user %}
+            <a href="{{ url_for('home') }}" class="et-btn et-btn--primary et-btn-magnetic"
+                style="padding:13px 32px; font-size:1rem;">
+                Open Dashboard →
+            </a>
+            {% else %}
+            <a href="{{ url_for('register') }}" class="et-btn et-btn--primary et-btn-magnetic"
+                style="padding:13px 32px; font-size:1rem;">
+                Create free account →
+            </a>
+            {% endif %}
+        </section>
+
+        <!-- ── FOOTER ──────────────────────────── -->
+        <footer class="et-footer">
+            <div class="et-footer__brand">
+                <span
+                    style="width:7px;height:7px;background:var(--accent);border-radius:50%;display:inline-block;"></span>
+                Expense Tracker
+            </div>
+            <div class="et-footer__copy">Built with Flask + SQLAlchemy + Chart.js</div>
+            <div class="et-footer__links">
+                <a href="{{ url_for('login') }}" class="et-footer__link">Sign in</a>
+                <a href="{{ url_for('register') }}" class="et-footer__link">Register</a>
+            </div>
+        </footer>
+
+    </div><!-- /et-landing -->
+
+    <!-- ── SCRIPTS ────────────────────────────── -->
+    <script>
+        // ── TYPEWRITER ──────────────────────────────
+        const words = ['spending.', 'finances.', 'budget.', 'future.'];
+        let wIdx = 0, cIdx = 0, deleting = false;
+        const el = document.getElementById('typewriter');
+
+        function typeWrite() {
+            const word = words[wIdx];
+            el.textContent = deleting ? word.slice(0, cIdx--) : word.slice(0, ++cIdx);
+            if (!deleting && cIdx === word.length) {
+                setTimeout(() => { deleting = true; typeWrite(); }, 1800);
+                return;
+            }
+            if (deleting && cIdx === 0) {
+                deleting = false;
+                wIdx = (wIdx + 1) % words.length;
+            }
+            setTimeout(typeWrite, deleting ? 60 : 100);
+        }
+        typeWrite();
+
+        // ── COUNTER ANIMATION ───────────────────────
+        function animateCounter(el, target, duration = 1500) {
+            let start = null;
+            const step = ts => {
+                if (!start) start = ts;
+                const progress = Math.min((ts - start) / duration, 1);
+                const eased = 1 - Math.pow(1 - progress, 3);
+                el.textContent = Math.round(eased * target) + (target === 100 ? '%' : '+');
+                if (progress < 1) requestAnimationFrame(step);
+                else el.textContent = target === 0 ? '0' : target === 100 ? '100%' : target + '+';
+            };
+            requestAnimationFrame(step);
+        }
+
+        // Trigger counters when visible
+        const counters = document.querySelectorAll('[data-counter]');
+        const obs = new IntersectionObserver(entries => {
+            entries.forEach(e => {
+                if (e.isIntersecting) {
+                    animateCounter(e.target, parseInt(e.target.dataset.counter));
+                    obs.unobserve(e.target);
+                }
+            });
+        }, { threshold: 0.5 });
+        counters.forEach(c => obs.observe(c));
+
+        // ── MAGNETIC BUTTONS ───────────────────────
+        document.querySelectorAll('.et-btn-magnetic').forEach(btn => {
+            btn.addEventListener('mousemove', e => {
+                const r = btn.getBoundingClientRect();
+                const x = e.clientX - r.left - r.width / 2;
+                const y = e.clientY - r.top - r.height / 2;
+                btn.style.transform = `translate(${x * 0.18}px, ${y * 0.18}px)`;
+            });
+            btn.addEventListener('mouseleave', () => {
+                btn.style.transform = '';
+            });
+        });
+
+        // ── FEATURE CARD STAGGER ───────────────────
+        const cards = document.querySelectorAll('.et-feature-card');
+        const cardObs = new IntersectionObserver(entries => {
+            entries.forEach((e, i) => {
+                if (e.isIntersecting) {
+                    e.target.style.animation = `pageFadeIn 0.4s ease ${i * 0.07}s both`;
+                    cardObs.unobserve(e.target);
+                }
+            });
+        }, { threshold: 0.1 });
+        cards.forEach(c => { c.style.opacity = '0'; cardObs.observe(c); });
+
+        // ── THEME ───────────────────────────────────
+        const toggle = document.getElementById('themeToggle');
+        const icon = document.getElementById('themeIcon');
+        const root = document.documentElement;
+        const saved = localStorage.getItem('theme') || 'light';
+        root.setAttribute('data-theme', saved);
+        toggle.checked = saved === 'dark';
+        icon.textContent = saved === 'dark' ? '☽' : '☀';
+        toggle.addEventListener('change', () => {
+            const t = toggle.checked ? 'dark' : 'light';
+            root.setAttribute('data-theme', t);
+            localStorage.setItem('theme', t);
+            icon.textContent = t === 'dark' ? '☽' : '☀';
+        });
+    </script>
+
+</body>
+
+</html>
